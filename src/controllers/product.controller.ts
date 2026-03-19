@@ -7,19 +7,23 @@ export class ProductController {
   constructor(private readonly productService: IProductService) {}
 
   getAllProducts = async (
-    _req: Request,
+    req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> => {
     try {
-      logger.info('GET /products - Obteniendo lista de productos');
-      
-      const products = await this.productService.getAllProducts();
-      
+      const first = Number(req.query.first) || 50;
+      const after = typeof req.query.after === 'string' ? req.query.after : undefined;
+
+      logger.info('GET /products - Obteniendo lista de productos', { first, after });
+
+      const page = await this.productService.getProductsPage(first, after);
+
       res.status(200).json({
         success: true,
-        data: products,
-        count: products.length,
+        data: page.products,
+        count: page.products.length,
+        pageInfo: page.pageInfo,
       });
     } catch (error) {
       next(error);

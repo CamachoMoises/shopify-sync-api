@@ -1,15 +1,13 @@
 import { Router } from 'express';
 import { VariantController } from '../controllers';
 import { validateRequest } from '../middleware/validation.middleware';
-import { 
-  createVariantSchema, 
+import {
+  createVariantSchema,
   updateVariantSchema,
-  bulkPriceUpdateSchema 
 } from '../validators/product.validator';
-import { 
-  apiRateLimiter, 
+import {
+  apiRateLimiter,
   writeRateLimiter,
-  bulkRateLimiter 
 } from '../middleware/rate-limit.middleware';
 
 // Factory function para crear rutas de variantes (DIP)
@@ -54,14 +52,6 @@ export const createVariantRoutes = (
     '/delete/:shopify_variant_id',
     writeRateLimiter,
     variantController.deleteVariant
-  );
-
-  // POST /product/variants/update/price - Actualización masiva de precios
-  router.post(
-    '/update/price',
-    bulkRateLimiter,
-    validateRequest(bulkPriceUpdateSchema),
-    variantController.bulkUpdatePrices
   );
 
   return router;

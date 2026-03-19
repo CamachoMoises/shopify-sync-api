@@ -10,6 +10,7 @@ import { getShopifyConfig, ShopifyGraphQLClient } from './config/shopify.config'
 import {
   ProductService,
   VariantService,
+  InventoryService,
   OrderService,
   ImageService,
   LocationService,
@@ -19,6 +20,7 @@ import {
 import {
   ProductController,
   VariantController,
+  InventoryController,
   OrderController,
   ImageController,
   LocationController,
@@ -28,6 +30,7 @@ import {
 import {
   createProductRoutes,
   createVariantRoutes,
+  createInventoryRoutes,
   createOrderRoutes,
   createImageRoutes,
   createLocationRoutes,
@@ -49,6 +52,7 @@ class DependencyContainer {
   // Servicios
   public readonly productService = new ProductService(this.shopifyClient);
   public readonly variantService = new VariantService(this.shopifyClient);
+  public readonly inventoryService = new InventoryService(this.productService, this.variantService);
   public readonly orderService = new OrderService(this.shopifyClient);
   public readonly imageService = new ImageService(this.shopifyClient);
   public readonly locationService = new LocationService(this.shopifyClient);
@@ -59,6 +63,9 @@ class DependencyContainer {
   );
   public readonly variantController = new VariantController(
     this.variantService
+  );
+  public readonly inventoryController = new InventoryController(
+    this.inventoryService
   );
   public readonly orderController = new OrderController(this.orderService);
   public readonly imageController = new ImageController(this.imageService);
@@ -145,6 +152,12 @@ export const createApp = (): Application => {
     createImageRoutes(container.imageController)
   );
 
+  // Inventory
+  app.use(
+    '/inventory',
+    createInventoryRoutes(container.inventoryController)
+  );
+
   // Locations
   app.use(
     '/locations',
@@ -154,7 +167,7 @@ export const createApp = (): Application => {
   // ============================================
   // MIDDLEWARE DE ERRORES
   // ============================================
-  
+
   // Ruta no encontrada
   app.use(notFoundHandler);
 

@@ -2,6 +2,7 @@ import {
   IProductService,
   IShopifyClient,
   Product,
+  ProductPage,
   CreateProductInput,
   UpdateProductInput,
   ShopifyResponse
@@ -9,11 +10,17 @@ import {
 import { logger } from '../config/logger.config';
 import { ShopifyAPIError, NotFoundError } from '../middleware/error.middleware';
 
+function formatShopifyId(id: string, type: string): string {
+  if (id.startsWith('gid://')) return id;
+  return `gid://shopify/${type}/${id}`;
+}
+
 // Queries y Mutations GraphQL
 const GET_PRODUCTS_QUERY = `
-  query GetProducts($first: Int!) {
-    products(first: $first) {
+  query GetProducts($first: Int!, $after: String) {
+    products(first: $first, after: $after) {
       edges {
+        cursor
         node {
           id
           title
@@ -74,6 +81,10 @@ const GET_PRODUCTS_QUERY = `
             }
           }
         }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
       }
     }
   }
@@ -189,6 +200,10 @@ interface ProductsData {
     edges: Array<{
       node: ShopifyProductNode;
     }>;
+    pageInfo: {
+      hasNextPage: boolean;
+      endCursor: string | null;
+    };
   };
 }
 
@@ -215,11 +230,6 @@ interface DeleteProductData {
     deletedProductId: string | null;
     userErrors: Array<{ field: string[]; message: string }>;
   };
-}
-
-function formatShopifyId(id: string, type: string): string {
-  if (id.startsWith('gid://')) return id;
-  return `gid://shopify/${type}/${id}`;
 }
 
 interface ShopifyProductNode {
@@ -287,25 +297,57 @@ export class ProductService implements IProductService {
   async getAllProducts(): Promise<Product[]> {
     try {
       logger.info('Obteniendo todos los productos de Shopify');
+      const allProducts: Product[] = [];
+      let after: string | null = null;
+      const chunkSize = 50;
 
-      const response = await this.shopifyClient.request<
+      do {
+        const page = await this.getProductsPage(chunkSize, after || undefined);
+        allProducts.push(...page.products);
+        after = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
+      } while (after);
+
+      logger.info(`Obtenidos ${allProducts.length} productos`);
+      return allProducts;
+    } catch (error) {
+      logger.error('Error obteniendo productos', { error });
+      throw error;
+    }
+  }
+
+  async getProductsPage(first: number, after?: string): Promise<ProductPage> {
+    try {
+      logger.info('Obteniendo página de productos de Shopify', { first, after });
+      const variables: { first: number; after?: string } = { first };
+      if (after) variables.after = after;
+      const response: ShopifyResponse<ProductsData> = await this.shopifyClient.request<
         ShopifyResponse<ProductsData>
-      >(GET_PRODUCTS_QUERY, { first: 250 });
+      >(GET_PRODUCTS_QUERY, variables);
 
       if (response.errors && response.errors.length > 0) {
-        throw new ShopifyAPIError(
-          `Error de Shopify: ${response.errors[0].message}`
-        );
+        throw new ShopifyAPIError(`Error de Shopify: ${response.errors[0].message}`);
       }
 
       const products = response.data.products.edges.map((edge) =>
         this.mapShopifyProductToProduct(edge.node)
       );
-
-      logger.info(`Obtenidos ${products.length} productos`);
-      return products;
+      const { hasNextPage, endCursor } = response.data.products.pageInfo;
+      logger.info('Page result', {
+        productCount: products.length,
+        firstProductId: products[0]?.id,
+        lastProductId: products[products.length - 1]?.id,
+        hasNextPage,
+        endCursor,
+      });
+      return {
+        products,
+        pageInfo: {
+          hasNextPage,
+          endCursor: endCursor ?? null,
+        },
+      };
     } catch (error) {
-      logger.error('Error obteniendo productos', { error });
+      logger.error('Error obteniendo página de productos', { error });
       throw error;
     }
   }

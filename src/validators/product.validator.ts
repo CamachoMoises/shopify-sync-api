@@ -43,6 +43,7 @@ export const updateVariantSchema = z.object({
   price: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
   compareAtPrice: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
   inventoryQuantity: z.number().int().min(0).optional(),
+  locationId: z.string().optional(),
 });
 
 // Esquema para actualización masiva de precios
@@ -63,9 +64,20 @@ export const createImageSchema = z.object({
 });
 
 // Tipos inferidos de los esquemas
+export const inventoryVariantUpdateSchema = z.object({
+  shopifyVariantId: z.string().min(1, 'Shopify Variant ID es requerido'),
+  inventoryQuantity: z.number().int().min(0, 'Cantidad de inventario debe ser >= 0'),
+  locationId: z.string().min(1, 'Location ID es requerido'),
+});
+
+export const bulkInventoryUpdateSchema = z.object({
+  updates: z.array(inventoryVariantUpdateSchema).min(1, 'Al menos una actualización es requerida'),
+});
+
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 export type UpdateProductInput = z.infer<typeof updateProductSchema>;
 export type CreateVariantInput = z.infer<typeof createVariantSchema>;
 export type UpdateVariantInput = z.infer<typeof updateVariantSchema>;
 export type BulkPriceUpdateInput = z.infer<typeof bulkPriceUpdateSchema>;
+export type BulkInventoryUpdateInput = z.infer<typeof bulkInventoryUpdateSchema>;
 export type CreateImageInput = z.infer<typeof createImageSchema>;

@@ -101,6 +101,7 @@ export interface UpdateVariantInput {
   price?: string;
   compareAtPrice?: string;
   inventoryQuantity?: number;
+  locationId?: string;
 }
 
 export interface BulkPriceUpdateInput {
@@ -203,8 +204,19 @@ export interface LocationAddress {
 // INTERFACES DE SERVICIOS (DIP)
 // ============================================
 
+export interface PageInfo {
+  hasNextPage: boolean;
+  endCursor: string | null;
+}
+
+export interface ProductPage {
+  products: Product[];
+  pageInfo: PageInfo;
+}
+
 export interface IProductService {
   getAllProducts(): Promise<Product[]>;
+  getProductsPage(first: number, after?: string): Promise<ProductPage>;
   getProductById(productId: string): Promise<Product | null>;
   createProduct(input: CreateProductInput): Promise<string>;
   updateProduct(productId: string, input: UpdateProductInput): Promise<void>;
@@ -213,10 +225,32 @@ export interface IProductService {
 
 export interface IVariantService {
   getVariantsByProductId(productId: string): Promise<ProductVariant[]>;
+  getVariantById(variantId: string): Promise<ProductVariant | null>;
   createVariant(productId: string, input: CreateVariantInput): Promise<string>;
   updateVariant(variantId: string, input: UpdateVariantInput): Promise<void>;
   deleteVariant(variantId: string): Promise<void>;
   bulkUpdatePrices(updates: BulkPriceUpdateInput[]): Promise<void>;
+}
+
+export interface InventoryVariantUpdate {
+  shopifyVariantId: string;
+  inventoryQuantity: number;
+  locationId: string;
+}
+
+export interface InventoryProductUpdate {
+  productId: string;
+  variants: InventoryVariantUpdate[];
+}
+
+export interface IInventoryService {
+  listProductsInventory(first?: number, after?: string): Promise<ProductPage>;
+  showProductInventory(productId: string): Promise<Product | null>;
+  updateProductInventory(productId: string, update: InventoryProductUpdate): Promise<void>;
+  listVariantsInventory(productId: string): Promise<ProductVariant[]>;
+  showVariantInventory(variantId: string): Promise<ProductVariant | null>;
+  updateVariantInventory(update: InventoryVariantUpdate): Promise<void>;
+  bulkUpdateVariantsInventory(updates: InventoryVariantUpdate[]): Promise<void>;
 }
 
 export interface IOrderService {

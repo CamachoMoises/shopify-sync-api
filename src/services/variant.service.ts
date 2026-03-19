@@ -49,6 +49,42 @@ const GET_VARIANTS_QUERY = `
   }
 `;
 
+const GET_VARIANT_QUERY = `
+  query GetVariant($id: ID!) {
+    node(id: $id) {
+      ... on ProductVariant {
+        id
+        title
+        sku
+        price
+        inventoryQuantity
+        product {
+          id
+        }
+        inventoryItem {
+          id
+          inventoryLevels(first: 1) {
+            edges {
+              node {
+                location {
+                  id
+                }
+              }
+            }
+          }
+        }
+        selectedOptions {
+          name
+          value
+        }
+        image {
+          id
+        }
+      }
+    }
+  }
+`;
+
 const CREATE_VARIANT_MUTATION = `
   mutation CreateVariant($input: ProductVariantInput!) {
     productVariantCreate(input: $input) {
@@ -115,6 +151,10 @@ interface VariantsData {
   } | null;
 }
 
+interface VariantData {
+  node: ShopifyVariantNode | null;
+}
+
 interface CreateVariantData {
   productVariantCreate: {
     productVariant: { id: string } | null;
@@ -159,6 +199,9 @@ interface ShopifyVariantNode {
   price: string;
   compareAtPrice: string | null;
   inventoryQuantity: number;
+  product: {
+    id: string;
+  } | null;
   inventoryItem: {
     id: string;
     inventoryLevels: {
@@ -205,6 +248,35 @@ export class VariantService implements IVariantService {
       return variants;
     } catch (error) {
       logger.error('Error obteniendo variantes', { productId, error });
+      throw error;
+    }
+  }
+
+  async getVariantById(variantId: string): Promise<ProductVariant | null> {
+    try {
+      logger.info('Obteniendo variante', { variantId });
+
+      const response = await this.shopifyClient.request<
+        ShopifyResponse<VariantData>
+      >(GET_VARIANT_QUERY, { id: formatShopifyId(variantId, 'ProductVariant') });
+
+      if (response.errors && response.errors.length > 0) {
+        throw new ShopifyAPIError(
+          `Error de Shopify: ${response.errors[0].message}`
+        );
+      }
+
+      const node = response.data.node;
+      if (!node) {
+        return null;
+      }
+
+      return this.mapShopifyVariantToVariant(
+        node,
+        node.product?.id || ''
+      );
+    } catch (error) {
+      logger.error('Error obteniendo variante', { variantId, error });
       throw error;
     }
   }
@@ -280,6 +352,14 @@ export class VariantService implements IVariantService {
           price: input.price,
           sku: input.sku,
           compareAtPrice: input.compareAtPrice,
+          inventoryQuantities: input.inventoryQuantity
+            ? [
+              {
+                availableQuantity: input.inventoryQuantity,
+                locationId: input.locationId || '',
+              },
+            ]
+            : undefined,
         },
       });
 
