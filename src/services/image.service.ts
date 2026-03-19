@@ -18,7 +18,6 @@ const GET_IMAGES_QUERY = `
             id
             url
             altText
-            variantIds
           }
         }
       }
@@ -80,7 +79,7 @@ interface CreateImageData {
 
 interface AttachImageData {
   productImageUpdate: {
-    image: { id: string; variantIds: string[] } | null;
+    image: { id: string } | null;
     userErrors: Array<{ field: string[]; message: string }>;
   };
 }
@@ -89,7 +88,11 @@ interface ShopifyImageNode {
   id: string;
   url: string;
   altText: string | null;
-  variantIds: string[];
+}
+
+function formatShopifyId(id: string, type: string): string {
+  if (id.startsWith('gid://')) return id;
+  return `gid://shopify/${type}/${id}`;
 }
 
 // Servicio de Imágenes - Implementa IImageService (DIP + SRP)
@@ -102,7 +105,7 @@ export class ImageService implements IImageService {
 
       const response = await this.shopifyClient.request<
         ShopifyResponse<ImagesData>
-      >(GET_IMAGES_QUERY, { productId });
+      >(GET_IMAGES_QUERY, { productId: formatShopifyId(productId, 'Product') });
 
       if (response.errors && response.errors.length > 0) {
         throw new ShopifyAPIError(
@@ -118,7 +121,6 @@ export class ImageService implements IImageService {
         id: edge.node.id,
         url: edge.node.url,
         altText: edge.node.altText || undefined,
-        variantIds: edge.node.variantIds,
       }));
 
       logger.info(`Obtenidas ${images.length} imágenes`, { productId });
@@ -137,11 +139,14 @@ export class ImageService implements IImageService {
     try {
       logger.info('Agregando imagen a variante', { productId, variantId });
 
+      const formattedProductId = formatShopifyId(productId, 'Product');
+      const formattedVariantId = formatShopifyId(variantId, 'ProductVariant');
+
       // Primero creamos la imagen
       const createResponse = await this.shopifyClient.request<
         ShopifyResponse<CreateImageData>
       >(CREATE_IMAGE_MUTATION, {
-        productId,
+        productId: formattedProductId,
         input: {
           src: input.src,
           altText: input.altText,
@@ -171,9 +176,9 @@ export class ImageService implements IImageService {
       const attachResponse = await this.shopifyClient.request<
         ShopifyResponse<AttachImageData>
       >(ATTACH_IMAGE_TO_VARIANT_MUTATION, {
-        productId,
+        productId: formattedProductId,
         imageId: createdImage.id,
-        variantIds: [variantId],
+        variantIds: [formattedVariantId],
       });
 
       if (attachResponse.errors && attachResponse.errors.length > 0) {

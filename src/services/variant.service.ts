@@ -1,11 +1,11 @@
-import { 
-  IVariantService, 
+import {
+  IVariantService,
   IShopifyClient,
-  ProductVariant, 
-  CreateVariantInput, 
+  ProductVariant,
+  CreateVariantInput,
   UpdateVariantInput,
   BulkPriceUpdateInput,
-  ShopifyResponse 
+  ShopifyResponse
 } from '../types';
 import { logger } from '../config/logger.config';
 import { ShopifyAPIError, NotFoundError, BadRequestError } from '../middleware/error.middleware';
@@ -25,6 +25,15 @@ const GET_VARIANTS_QUERY = `
             inventoryQuantity
             inventoryItem {
               id
+              inventoryLevels(first: 1) {
+                edges {
+                  node {
+                    location {
+                      id
+                    }
+                  }
+                }
+              }
             }
             selectedOptions {
               name
@@ -138,6 +147,11 @@ interface BulkUpdatePricesData {
   };
 }
 
+function formatShopifyId(id: string, type: string): string {
+  if (id.startsWith('gid://')) return id;
+  return `gid://shopify/${type}/${id}`;
+}
+
 interface ShopifyVariantNode {
   id: string;
   title: string;
@@ -145,14 +159,25 @@ interface ShopifyVariantNode {
   price: string;
   compareAtPrice: string | null;
   inventoryQuantity: number;
-  inventoryItem: { id: string } | null;
+  inventoryItem: {
+    id: string;
+    inventoryLevels: {
+      edges: Array<{
+        node: {
+          location: {
+            id: string;
+          };
+        };
+      }>;
+    };
+  } | null;
   selectedOptions: Array<{ name: string; value: string }>;
   image: { id: string } | null;
 }
 
 // Servicio de Variantes - Implementa IVariantService (DIP + SRP)
 export class VariantService implements IVariantService {
-  constructor(private readonly shopifyClient: IShopifyClient) {}
+  constructor(private readonly shopifyClient: IShopifyClient) { }
 
   async getVariantsByProductId(productId: string): Promise<ProductVariant[]> {
     try {
@@ -160,7 +185,7 @@ export class VariantService implements IVariantService {
 
       const response = await this.shopifyClient.request<
         ShopifyResponse<VariantsData>
-      >(GET_VARIANTS_QUERY, { productId });
+      >(GET_VARIANTS_QUERY, { productId: formatShopifyId(productId, 'Product') });
 
       if (response.errors && response.errors.length > 0) {
         throw new ShopifyAPIError(
@@ -185,7 +210,7 @@ export class VariantService implements IVariantService {
   }
 
   async createVariant(
-    productId: string, 
+    productId: string,
     input: CreateVariantInput
   ): Promise<string> {
     try {
@@ -195,18 +220,18 @@ export class VariantService implements IVariantService {
         ShopifyResponse<CreateVariantData>
       >(CREATE_VARIANT_MUTATION, {
         input: {
-          productId,
+          productId: formatShopifyId(productId, 'Product'),
           price: input.price,
           sku: input.sku,
           compareAtPrice: input.compareAtPrice,
           options: input.options?.map((opt) => opt.value),
           inventoryQuantities: input.inventoryQuantity
             ? [
-                {
-                  availableQuantity: input.inventoryQuantity,
-                  locationId: '', // Se debe obtener de locations
-                },
-              ]
+              {
+                availableQuantity: input.inventoryQuantity,
+                locationId: '', // Se debe obtener de locations
+              },
+            ]
             : undefined,
         },
       });
@@ -229,8 +254,8 @@ export class VariantService implements IVariantService {
         throw new ShopifyAPIError('No se pudo crear la variante');
       }
 
-      logger.info('Variante creada exitosamente', { 
-        variantId: productVariant.id 
+      logger.info('Variante creada exitosamente', {
+        variantId: productVariant.id
       });
 
       return productVariant.id;
@@ -241,7 +266,7 @@ export class VariantService implements IVariantService {
   }
 
   async updateVariant(
-    variantId: string, 
+    variantId: string,
     input: UpdateVariantInput
   ): Promise<void> {
     try {
@@ -251,7 +276,7 @@ export class VariantService implements IVariantService {
         ShopifyResponse<UpdateVariantData>
       >(UPDATE_VARIANT_MUTATION, {
         input: {
-          id: variantId,
+          id: formatShopifyId(variantId, 'ProductVariant'),
           price: input.price,
           sku: input.sku,
           compareAtPrice: input.compareAtPrice,
@@ -285,7 +310,7 @@ export class VariantService implements IVariantService {
 
       const response = await this.shopifyClient.request<
         ShopifyResponse<DeleteVariantData>
-      >(DELETE_VARIANT_MUTATION, { id: variantId });
+      >(DELETE_VARIANT_MUTATION, { id: formatShopifyId(variantId, 'ProductVariant') });
 
       if (response.errors && response.errors.length > 0) {
         throw new ShopifyAPIError(
@@ -314,16 +339,16 @@ export class VariantService implements IVariantService {
 
       // Shopify tiene un límite de 100 variantes por operación bulk
       const BATCH_SIZE = 100;
-      
+
       for (let i = 0; i < updates.length; i += BATCH_SIZE) {
         const batch = updates.slice(i, i + BATCH_SIZE);
-        
+
         logger.info(`Procesando batch ${Math.floor(i / BATCH_SIZE) + 1}`, {
           batchSize: batch.length,
         });
 
         const variantsInput = batch.map((update) => ({
-          id: update.shopifyVariantId,
+          id: formatShopifyId(update.shopifyVariantId, 'ProductVariant'),
           price: update.price,
           compareAtPrice: update.compareAtPrice,
         }));
@@ -354,8 +379,8 @@ export class VariantService implements IVariantService {
         }
       }
 
-      logger.info('Precios actualizados exitosamente', { 
-        totalUpdates: updates.length 
+      logger.info('Precios actualizados exitosamente', {
+        totalUpdates: updates.length
       });
     } catch (error) {
       logger.error('Error actualizando precios en masa', { error });
@@ -364,9 +389,11 @@ export class VariantService implements IVariantService {
   }
 
   private mapShopifyVariantToVariant(
-    node: ShopifyVariantNode, 
+    node: ShopifyVariantNode,
     productId: string
   ): ProductVariant {
+    const locationId = node.inventoryItem?.inventoryLevels?.edges?.[0]?.node?.location?.id;
+
     return {
       id: node.id,
       productId,
@@ -376,6 +403,7 @@ export class VariantService implements IVariantService {
       compareAtPrice: node.compareAtPrice || undefined,
       inventoryQuantity: node.inventoryQuantity,
       inventoryItemId: node.inventoryItem?.id,
+      locationId: locationId || undefined,
       options: node.selectedOptions.map((opt) => ({
         name: opt.name,
         value: opt.value,

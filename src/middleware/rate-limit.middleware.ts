@@ -11,7 +11,7 @@ export const apiRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  handler: (req, res, next, options) => {
+  handler: (req, res, _next, options) => {
     logger.warn('Rate limit excedido', {
       ip: req.ip,
       path: req.path,
@@ -30,7 +30,7 @@ export const writeRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  handler: (req, res, next, options) => {
+  handler: (req, res, _next, options) => {
     logger.warn('Write rate limit excedido', {
       ip: req.ip,
       path: req.path,
@@ -50,7 +50,7 @@ export const bulkRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  handler: (req, res, next, options) => {
+  handler: (req, res, _next, options) => {
     logger.warn('Bulk rate limit excedido', {
       ip: req.ip,
       path: req.path,

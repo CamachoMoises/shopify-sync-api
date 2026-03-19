@@ -1,10 +1,10 @@
-import { 
-  IProductService, 
+import {
+  IProductService,
   IShopifyClient,
-  Product, 
-  CreateProductInput, 
+  Product,
+  CreateProductInput,
   UpdateProductInput,
-  ShopifyResponse 
+  ShopifyResponse
 } from '../types';
 import { logger } from '../config/logger.config';
 import { ShopifyAPIError, NotFoundError } from '../middleware/error.middleware';
@@ -22,6 +22,7 @@ const GET_PRODUCTS_QUERY = `
           productType
           tags
           status
+          publishedAt
           createdAt
           updatedAt
           variants(first: 100) {
@@ -35,6 +36,15 @@ const GET_PRODUCTS_QUERY = `
                 inventoryQuantity
                 inventoryItem {
                   id
+                  inventoryLevels(first: 1) {
+                    edges {
+                      node {
+                        location {
+                          id
+                        }
+                      }
+                    }
+                  }
                 }
                 selectedOptions {
                   name
@@ -49,6 +59,17 @@ const GET_PRODUCTS_QUERY = `
                 id
                 url
                 altText
+              }
+            }
+          }
+          resourcePublications(first: 100) {
+            edges {
+              node {
+                publication {
+                  id
+                  name
+                }
+                publishDate
               }
             }
           }
@@ -68,6 +89,7 @@ const GET_PRODUCT_QUERY = `
       productType
       tags
       status
+      publishedAt
       createdAt
       updatedAt
       variants(first: 100) {
@@ -81,6 +103,15 @@ const GET_PRODUCT_QUERY = `
             inventoryQuantity
             inventoryItem {
               id
+              inventoryLevels(first: 1) {
+                edges {
+                  node {
+                    location {
+                      id
+                    }
+                  }
+                }
+              }
             }
             selectedOptions {
               name
@@ -95,6 +126,17 @@ const GET_PRODUCT_QUERY = `
             id
             url
             altText
+          }
+        }
+      }
+      resourcePublications(first: 100) {
+        edges {
+          node {
+            publication {
+              id
+              name
+            }
+            publishDate
           }
         }
       }
@@ -175,6 +217,11 @@ interface DeleteProductData {
   };
 }
 
+function formatShopifyId(id: string, type: string): string {
+  if (id.startsWith('gid://')) return id;
+  return `gid://shopify/${type}/${id}`;
+}
+
 interface ShopifyProductNode {
   id: string;
   title: string;
@@ -183,6 +230,7 @@ interface ShopifyProductNode {
   productType: string | null;
   tags: string[];
   status: string;
+  publishedAt: string;
   createdAt: string;
   updatedAt: string;
   variants: {
@@ -194,7 +242,18 @@ interface ShopifyProductNode {
         price: string;
         compareAtPrice: string | null;
         inventoryQuantity: number;
-        inventoryItem: { id: string } | null;
+        inventoryItem: {
+          id: string;
+          inventoryLevels: {
+            edges: Array<{
+              node: {
+                location: {
+                  id: string;
+                };
+              };
+            }>;
+          };
+        } | null;
         selectedOptions: Array<{ name: string; value: string }>;
       };
     }>;
@@ -208,16 +267,27 @@ interface ShopifyProductNode {
       };
     }>;
   };
+  resourcePublications: {
+    edges: Array<{
+      node: {
+        publication: {
+          id: string;
+          name: string;
+        };
+        publishDate: string | null;
+      };
+    }>;
+  };
 }
 
 // Servicio de Productos - Implementa IProductService (DIP + SRP)
 export class ProductService implements IProductService {
-  constructor(private readonly shopifyClient: IShopifyClient) {}
+  constructor(private readonly shopifyClient: IShopifyClient) { }
 
   async getAllProducts(): Promise<Product[]> {
     try {
       logger.info('Obteniendo todos los productos de Shopify');
-      
+
       const response = await this.shopifyClient.request<
         ShopifyResponse<ProductsData>
       >(GET_PRODUCTS_QUERY, { first: 250 });
@@ -244,8 +314,8 @@ export class ProductService implements IProductService {
     try {
       logger.info('Obteniendo producto por ID', { productId });
 
-      const formattedId = productId.startsWith('gid://') 
-        ? productId 
+      const formattedId = productId.startsWith('gid://')
+        ? productId
         : `gid://shopify/Product/${productId}`;
 
       const response = await this.shopifyClient.request<
@@ -279,11 +349,11 @@ export class ProductService implements IProductService {
         compareAtPrice: variant.compareAtPrice,
         inventoryQuantities: variant.inventoryQuantity
           ? [
-              {
-                availableQuantity: variant.inventoryQuantity,
-                locationId: '', // Se debe obtener de locations
-              },
-            ]
+            {
+              availableQuantity: variant.inventoryQuantity,
+              locationId: '', // Se debe obtener de locations
+            },
+          ]
           : undefined,
         options: variant.options?.map((opt) => opt.value),
       }));
@@ -319,8 +389,8 @@ export class ProductService implements IProductService {
         throw new ShopifyAPIError('No se pudo crear el producto');
       }
 
-      logger.info('Producto creado exitosamente', { 
-        productId: product.id 
+      logger.info('Producto creado exitosamente', {
+        productId: product.id
       });
 
       return product.id;
@@ -331,7 +401,7 @@ export class ProductService implements IProductService {
   }
 
   async updateProduct(
-    productId: string, 
+    productId: string,
     input: UpdateProductInput
   ): Promise<void> {
     try {
@@ -341,7 +411,7 @@ export class ProductService implements IProductService {
         ShopifyResponse<UpdateProductData>
       >(UPDATE_PRODUCT_MUTATION, {
         input: {
-          id: productId,
+          id: formatShopifyId(productId, 'Product'),
           title: input.title,
           descriptionHtml: input.description,
           vendor: input.vendor,
@@ -381,7 +451,7 @@ export class ProductService implements IProductService {
         ShopifyResponse<DeleteProductData>
       >(DELETE_PRODUCT_MUTATION, {
         input: {
-          id: productId,
+          id: formatShopifyId(productId, 'Product'),
         },
       });
 
@@ -415,6 +485,7 @@ export class ProductService implements IProductService {
       productType: node.productType || undefined,
       tags: node.tags,
       status: node.status as 'ACTIVE' | 'DRAFT' | 'ARCHIVED',
+      publishedAt: node.publishedAt || undefined,
       createdAt: node.createdAt,
       updatedAt: node.updatedAt,
       variants: node.variants.edges.map((edge) => ({
@@ -426,6 +497,7 @@ export class ProductService implements IProductService {
         compareAtPrice: edge.node.compareAtPrice || undefined,
         inventoryQuantity: edge.node.inventoryQuantity,
         inventoryItemId: edge.node.inventoryItem?.id,
+        locationId: edge.node.inventoryItem?.inventoryLevels?.edges?.[0]?.node?.location?.id || undefined,
         options: edge.node.selectedOptions.map((opt) => ({
           name: opt.name,
           value: opt.value,
@@ -435,6 +507,14 @@ export class ProductService implements IProductService {
         id: edge.node.id,
         url: edge.node.url,
         altText: edge.node.altText || undefined,
+      })),
+      resourcePublications: node.resourcePublications.edges.map((edge) => ({
+        id: edge.node.publication.id,
+        publication: {
+          id: edge.node.publication.id,
+          name: edge.node.publication.name,
+        },
+        publishedAt: edge.node.publishDate || undefined,
       })),
     };
   }

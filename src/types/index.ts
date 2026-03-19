@@ -26,10 +26,21 @@ export interface Product {
   productType?: string;
   tags?: string[];
   status: ProductStatus;
+  publishedAt?: string;
   variants: ProductVariant[];
   images: ProductImage[];
   createdAt?: string;
   updatedAt?: string;
+  resourcePublications?: ResourcePublication[];
+}
+
+export interface ResourcePublication {
+  id: string;
+  publication: {
+    id: string;
+    name: string;
+  };
+  publishedAt?: string;
 }
 
 export type ProductStatus = 'ACTIVE' | 'DRAFT' | 'ARCHIVED';
@@ -65,6 +76,7 @@ export interface ProductVariant {
   compareAtPrice?: string;
   inventoryQuantity?: number;
   inventoryItemId?: string;
+  locationId?: string;
   options?: VariantOption[];
   imageId?: string;
 }
@@ -106,7 +118,6 @@ export interface ProductImage {
   id: string;
   url: string;
   altText?: string;
-  variantIds?: string[];
 }
 
 export interface CreateImageInput {

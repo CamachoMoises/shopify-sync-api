@@ -12,6 +12,9 @@ export interface ShopifyConfig {
 
 export const getShopifyConfig = (): ShopifyConfig => {
   const shopName = process.env.SHOPIFY_SHOP_NAME;
+  const apiKey = process.env.SHOPIFY_API_KEY;
+  const apiSecret = process.env.SHOPIFY_API_SECRET;
+  const shopUrl = process.env.SHOPIFY_SHOP_URL;
   const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
   const apiVersion = process.env.SHOPIFY_API_VERSION || '2024-01';
 
@@ -21,6 +24,9 @@ export const getShopifyConfig = (): ShopifyConfig => {
 
   return {
     shopName,
+    apiKey: apiKey || '',
+    apiSecret: apiSecret || '',
+    shopUrl: shopUrl || `https://${shopName}.myshopify.com/`,
     accessToken,
     apiVersion,
     baseUrl: `https://${shopName}.myshopify.com/admin/api/${apiVersion}`,
