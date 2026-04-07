@@ -27,6 +27,6 @@ export const logger = winston.createLogger({
 // Stream para Morgan (HTTP logging)
 export const loggerStream = {
   write: (message: string): void => {
-    logger.info(message.trim());
+    console.log(message.trim());
   },
 };

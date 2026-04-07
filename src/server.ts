@@ -7,23 +7,23 @@ const startServer = (): void => {
   const app = createApp();
 
   app.listen(PORT, () => {
-    logger.info(`🚀 Servidor iniciado en puerto ${PORT}`);
-    logger.info(`📚 Documentación de la API:`);
-    logger.info(`   - Health Check: http://localhost:${PORT}/health`);
-    logger.info(`   - Products: http://localhost:${PORT}/products`);
-    logger.info(`   - Orders: http://localhost:${PORT}/orders`);
-    logger.info(`   - Locations: http://localhost:${PORT}/locations`);
+    console.log(`🚀 Servidor iniciado en puerto ${PORT}`);
+    console.log(`📚 Documentación de la API:`);
+    console.log(`   - Health Check: http://localhost:${PORT}/health`);
+    console.log(`   - Products: http://localhost:${PORT}/products`);
+    console.log(`   - Orders: http://localhost:${PORT}/orders`);
+    console.log(`   - Locations: http://localhost:${PORT}/locations`);
   });
 };
 
 // Manejo de errores no capturados
 process.on('uncaughtException', (error) => {
-  logger.error('Uncaught Exception', { error });
+  console.error('Uncaught Exception', { error });
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason) => {
-  logger.error('Unhandled Rejection', { reason });
+  console.error('Unhandled Rejection', { reason });
   process.exit(1);
 });
 

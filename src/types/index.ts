@@ -114,6 +114,7 @@ export interface ProductOptionValueInput {
 }
 
 export interface UpdateVariantInput {
+  productId?: string;
   title?: string;
   sku?: string;
   price?: string;
@@ -141,6 +142,25 @@ export interface DeleteVariantPayload {
 export interface VariantImageInput {
   id: string;
   image: string;
+}
+
+export interface VariantOptionValueInput {
+  optionName: string;
+  name: string;
+}
+
+export interface CreateVariantForProductInput {
+  price: string;
+  sku?: string;
+  compareAtPrice?: string;
+  inventoryQuantity?: number;
+  locationId?: string;
+  optionValues?: VariantOptionValueInput[];
+}
+
+export interface AddVariantsPayload {
+  productId: string;
+  variants: CreateVariantForProductInput[];
 }
 
 export interface UpdateVariantImagesInput {
@@ -287,6 +307,7 @@ export interface IProductService {
   updateProduct(productId: string, input: UpdateProductInput): Promise<void>;
   updateVariant(payload: UpdateVariantPayload): Promise<void>;
   updateVariantImages(input: UpdateVariantImagesInput): Promise<void>;
+  addVariants(payload: AddVariantsPayload): Promise<void>;
   deleteVariant(payload: DeleteVariantPayload): Promise<void>;
   deleteProduct(productId: string): Promise<void>;
 }
@@ -311,10 +332,22 @@ export interface InventoryProductUpdate {
   variants: InventoryVariantUpdate[];
 }
 
+export interface PriceVariantUpdate {
+  shopifyVariantId: string;
+  price: string;
+  compareAtPrice?: string;
+}
+
+export interface PriceProductUpdate {
+  productId: string;
+  variants: PriceVariantUpdate[];
+}
+
 export interface IInventoryService {
   listProductsInventory(first?: number, after?: string): Promise<ProductPage>;
   showProductInventory(productId: string): Promise<Product | null>;
   updateProductInventory(productId: string, update: InventoryProductUpdate): Promise<void>;
+  updateProductPrices(productId: string, update: PriceProductUpdate): Promise<void>;
   listVariantsInventory(productId: string): Promise<ProductVariant[]>;
   showVariantInventory(variantId: string): Promise<ProductVariant | null>;
   updateVariantInventory(update: InventoryVariantUpdate): Promise<void>;

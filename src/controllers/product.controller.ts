@@ -4,7 +4,7 @@ import { logger } from '../config/logger.config';
 
 // Controlador de Productos - Maneja HTTP requests (SRP)
 export class ProductController {
-  constructor(private readonly productService: IProductService) {}
+  constructor(private readonly productService: IProductService) { }
 
   getAllProducts = async (
     req: Request,
@@ -15,7 +15,7 @@ export class ProductController {
       const first = Number(req.query.first) || 50;
       const after = typeof req.query.after === 'string' ? req.query.after : undefined;
 
-      logger.info('GET /products - Obteniendo lista de productos', { first, after });
+      console.log('GET /products - Obteniendo lista de productos', { first, after });
 
       const page = await this.productService.getProductsPage(first, after);
 
@@ -37,7 +37,7 @@ export class ProductController {
   ): Promise<void> => {
     try {
       const { product_id } = req.params;
-      logger.info(`GET /product/${product_id} - Obteniendo detalle de producto`);
+      console.log(`GET /product/${product_id} - Obteniendo detalle de producto`);
 
       const product = await this.productService.getProductById(product_id);
 
@@ -56,7 +56,7 @@ export class ProductController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      logger.info('POST /product/create - Creando nuevo producto');
+      console.log('POST /product/create - Creando nuevo producto');
 
       const shopifyId = await this.productService.createProduct(req.body);
 
@@ -79,7 +79,7 @@ export class ProductController {
   ): Promise<void> => {
     try {
       const { product_id } = req.params;
-      logger.info(`PUT /product/update/${product_id} - Actualizando producto`);
+      console.log(`PUT /product/update/${product_id} - Actualizando producto`);
 
       await this.productService.updateProduct(product_id, req.body);
 
@@ -99,7 +99,7 @@ export class ProductController {
   ): Promise<void> => {
     try {
       const { product_id } = req.params;
-      logger.info(`PUT /product/delete/${product_id} - Desactivando producto`);
+      console.log(`PUT /product/delete/${product_id} - Desactivando producto`);
 
       await this.productService.deleteProduct(product_id);
 
@@ -118,7 +118,7 @@ export class ProductController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      logger.info('POST /product/variants - Actualizando variantes');
+      console.log('POST /product/variants - Actualizando variantes');
 
       await this.productService.updateVariant(req.body);
 
@@ -137,7 +137,7 @@ export class ProductController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      logger.info('DELETE /product/variants - Eliminando variantes');
+      console.log('DELETE /product/variants - Eliminando variantes');
 
       await this.productService.deleteVariant(req.body);
 
@@ -157,7 +157,7 @@ export class ProductController {
   ): Promise<void> => {
     try {
       const { productId, ...updateData } = req.body;
-      logger.info(`POST /product/edit - Editando producto ${productId}`);
+      console.log(`POST /product/edit - Editando producto ${productId}`);
 
       await this.productService.updateProduct(productId, updateData);
 
@@ -177,7 +177,7 @@ export class ProductController {
   ): Promise<void> => {
     try {
       const { productId } = req.body;
-      logger.info(`POST /product/delete - Eliminando producto ${productId}`);
+      console.log(`POST /product/delete - Eliminando producto ${productId}`);
 
       await this.productService.deleteProduct(productId);
 
@@ -196,13 +196,32 @@ export class ProductController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      logger.info('POST /product/variants/images - Actualizando imágenes de variantes');
+      console.log('POST /product/variants/images - Actualizando imágenes de variantes');
 
       await this.productService.updateVariantImages(req.body);
 
       res.status(200).json({
         success: true,
         message: 'Imágenes de variantes actualizadas exitosamente',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  addVariants = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      console.log('POST /product/variants/add - Agregando variantes');
+
+      await this.productService.addVariants(req.body);
+
+      res.status(201).json({
+        success: true,
+        message: 'Variantes agregadas exitosamente',
       });
     } catch (error) {
       next(error);

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { InventoryController } from '../controllers';
 import { validateRequest } from '../middleware/validation.middleware';
-import { bulkInventoryUpdateSchema } from '../validators/product.validator';
+import { bulkInventoryUpdateSchema, inventoryProductUpdateSchema, priceProductUpdateSchema } from '../validators/product.validator';
 import { apiRateLimiter, writeRateLimiter, bulkRateLimiter } from '../middleware/rate-limit.middleware';
 
 export const createInventoryRoutes = (
@@ -23,11 +23,20 @@ export const createInventoryRoutes = (
         inventoryController.showProductInventory
     );
 
-    // PUT /inventory/products/:product_id - Actualizar inventario de un producto (variantes)
+    // PUT /inventory/products/variants - Actualizar inventario de un producto (variantes)
     router.put(
-        '/products/:product_id',
+        '/products/variants',
         writeRateLimiter,
+        validateRequest(inventoryProductUpdateSchema),
         inventoryController.updateProductInventory
+    );
+
+    // PUT /inventory/products/prices - Actualizar precios de un producto
+    router.put(
+        '/products/prices',
+        writeRateLimiter,
+        validateRequest(priceProductUpdateSchema),
+        inventoryController.updateProductPrices
     );
 
     // GET /inventory/variants/:product_id - Listado de inventario de variantes

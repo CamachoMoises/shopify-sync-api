@@ -6,8 +6,8 @@ export class AppError extends Error {
   public readonly isOperational: boolean;
 
   constructor(
-    message: string, 
-    statusCode: number = 500, 
+    message: string,
+    statusCode: number = 500,
     isOperational: boolean = true
   ) {
     super(message);
@@ -44,7 +44,7 @@ export const errorHandler = (
 ): void => {
   // Error personalizado de nuestra aplicación
   if (err instanceof AppError) {
-    logger.error('Error de aplicación', {
+    console.error('Error de aplicación', {
       message: err.message,
       statusCode: err.statusCode,
       isOperational: err.isOperational,
@@ -60,7 +60,7 @@ export const errorHandler = (
   }
 
   // Error genérico
-  logger.error('Error no manejado', {
+  console.error('Error no manejado', {
     message: err.message,
     stack: err.stack,
   });

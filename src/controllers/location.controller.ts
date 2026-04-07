@@ -4,7 +4,7 @@ import { logger } from '../config/logger.config';
 
 // Controlador de Locaciones - Maneja HTTP requests (SRP)
 export class LocationController {
-  constructor(private readonly locationService: ILocationService) {}
+  constructor(private readonly locationService: ILocationService) { }
 
   getAllLocations = async (
     _req: Request,
@@ -12,7 +12,7 @@ export class LocationController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      logger.info('GET /locations - Obteniendo lista de locaciones');
+      console.log('GET /locations - Obteniendo lista de locaciones');
 
       const locations = await this.locationService.getAllLocations();
 

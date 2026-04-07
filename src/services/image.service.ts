@@ -1,9 +1,9 @@
-import { 
-  IImageService, 
+import {
+  IImageService,
   IShopifyClient,
-  ProductImage, 
+  ProductImage,
   CreateImageInput,
-  ShopifyResponse 
+  ShopifyResponse
 } from '../types';
 import { logger } from '../config/logger.config';
 import { ShopifyAPIError, NotFoundError, BadRequestError } from '../middleware/error.middleware';
@@ -97,11 +97,11 @@ function formatShopifyId(id: string, type: string): string {
 
 // Servicio de Imágenes - Implementa IImageService (DIP + SRP)
 export class ImageService implements IImageService {
-  constructor(private readonly shopifyClient: IShopifyClient) {}
+  constructor(private readonly shopifyClient: IShopifyClient) { }
 
   async getImagesByProductId(productId: string): Promise<ProductImage[]> {
     try {
-      logger.info('Obteniendo imágenes del producto', { productId });
+      console.log('Obteniendo imágenes del producto', { productId });
 
       const response = await this.shopifyClient.request<
         ShopifyResponse<ImagesData>
@@ -123,10 +123,10 @@ export class ImageService implements IImageService {
         altText: edge.node.altText || undefined,
       }));
 
-      logger.info(`Obtenidas ${images.length} imágenes`, { productId });
+      console.log(`Obtenidas ${images.length} imágenes`, { productId });
       return images;
     } catch (error) {
-      logger.error('Error obteniendo imágenes', { productId, error });
+      console.error('Error obteniendo imágenes', { productId, error });
       throw error;
     }
   }
@@ -137,7 +137,7 @@ export class ImageService implements IImageService {
     input: CreateImageInput
   ): Promise<string> {
     try {
-      logger.info('Agregando imagen a variante', { productId, variantId });
+      console.log('Agregando imagen a variante', { productId, variantId });
 
       const formattedProductId = formatShopifyId(productId, 'Product');
       const formattedVariantId = formatShopifyId(variantId, 'ProductVariant');
@@ -159,7 +159,7 @@ export class ImageService implements IImageService {
         );
       }
 
-      const { image: createdImage, userErrors: createErrors } = 
+      const { image: createdImage, userErrors: createErrors } =
         createResponse.data.productImageCreate;
 
       if (createErrors.length > 0) {
@@ -195,17 +195,17 @@ export class ImageService implements IImageService {
         );
       }
 
-      logger.info('Imagen agregada exitosamente', { 
+      console.log('Imagen agregada exitosamente', {
         imageId: createdImage.id,
-        variantId 
+        variantId
       });
 
       return createdImage.id;
     } catch (error) {
-      logger.error('Error agregando imagen a variante', { 
-        productId, 
-        variantId, 
-        error 
+      console.error('Error agregando imagen a variante', {
+        productId,
+        variantId,
+        error
       });
       throw error;
     }

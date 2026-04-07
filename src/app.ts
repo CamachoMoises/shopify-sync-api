@@ -55,7 +55,7 @@ class DependencyContainer {
   // Servicios
   public readonly productService = new ProductService(this.shopifyClient);
   public readonly variantService = new VariantService(this.shopifyClient);
-  public readonly inventoryService = new InventoryService(this.productService, this.variantService);
+  public readonly inventoryService = new InventoryService(this.productService, this.variantService, this.shopifyClient);
   public readonly orderService = new OrderService(this.shopifyClient);
   public readonly imageService = new ImageService(this.shopifyClient);
   public readonly locationService = new LocationService(this.shopifyClient);

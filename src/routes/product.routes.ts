@@ -8,7 +8,8 @@ import {
   bulkDeleteVariantsSchema,
   editProductSchema,
   deleteProductSchema,
-  updateVariantImagesSchema
+  updateVariantImagesSchema,
+  addVariantsSchema
 } from '../validators/product.validator';
 import { apiRateLimiter, writeRateLimiter } from '../middleware/rate-limit.middleware';
 
@@ -93,6 +94,14 @@ export const createProductRoutes = (
     writeRateLimiter,
     validateRequest(updateVariantImagesSchema),
     productController.updateVariantImages
+  );
+
+  // POST /product/variants/add - Agregar variantes
+  router.post(
+    '/variants/add',
+    writeRateLimiter,
+    validateRequest(addVariantsSchema),
+    productController.addVariants
   );
 
   return router;

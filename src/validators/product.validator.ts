@@ -84,6 +84,22 @@ export const bulkInventoryUpdateSchema = z.object({
   updates: z.array(inventoryVariantUpdateSchema).min(1, 'Al menos una actualización es requerida'),
 });
 
+export const inventoryProductUpdateSchema = z.object({
+  productId: z.string().min(1, 'Product ID es requerido'),
+  variants: z.array(inventoryVariantUpdateSchema).min(1, 'Al menos una variante es requerida'),
+});
+
+export const priceVariantUpdateSchema = z.object({
+  shopifyVariantId: z.string().min(1, 'Shopify Variant ID es requerido'),
+  price: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Precio debe ser un número válido'),
+  compareAtPrice: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
+});
+
+export const priceProductUpdateSchema = z.object({
+  productId: z.string().min(1, 'Product ID es requerido'),
+  variants: z.array(priceVariantUpdateSchema).min(1, 'Al menos una variante es requerida'),
+});
+
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 export type UpdateProductInput = z.infer<typeof updateProductSchema>;
 export type CreateVariantInput = z.infer<typeof createVariantSchema>;
@@ -139,3 +155,20 @@ export const updateVariantImagesSchema = z.object({
 });
 
 export type UpdateVariantImagesInput = z.infer<typeof updateVariantImagesSchema>;
+
+export const addVariantsSchema = z.object({
+  productId: z.string().min(1, 'Product ID es requerido'),
+  variants: z.array(z.object({
+    price: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Precio debe ser un número válido'),
+    sku: z.string().optional(),
+    compareAtPrice: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
+    inventoryQuantity: z.number().int().min(0).optional(),
+    locationId: z.string().optional(),
+    optionValues: z.array(z.object({
+      optionName: z.string().min(1, 'Nombre de opción es requerido'),
+      name: z.string().min(1, 'Valor de opción es requerido'),
+    })).optional(),
+  })).min(1, 'Al menos una variante es requerida'),
+});
+
+export type AddVariantsInput = z.infer<typeof addVariantsSchema>;

@@ -4,7 +4,7 @@ import { logger } from '../config/logger.config';
 
 // Controlador de Variantes - Maneja HTTP requests (SRP)
 export class VariantController {
-  constructor(private readonly variantService: IVariantService) {}
+  constructor(private readonly variantService: IVariantService) { }
 
   getVariantsByProductId = async (
     req: Request,
@@ -13,7 +13,7 @@ export class VariantController {
   ): Promise<void> => {
     try {
       const { product_id } = req.params;
-      logger.info(
+      console.log(
         `GET /product/variants/${product_id} - Obteniendo variantes del producto`
       );
 
@@ -35,7 +35,7 @@ export class VariantController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      logger.info('POST /product/variant/create - Creando nueva variante');
+      console.log('POST /product/variant/create - Creando nueva variante');
 
       const shopifyVariantId = await this.variantService.createVariant(
         req.body.productId,
@@ -61,7 +61,7 @@ export class VariantController {
   ): Promise<void> => {
     try {
       const { producto_id } = req.params;
-      logger.info(
+      console.log(
         `POST /product/variant/create/${producto_id} - Creando variante para producto`
       );
 
@@ -89,7 +89,7 @@ export class VariantController {
   ): Promise<void> => {
     try {
       const { shopify_variant_id } = req.params;
-      logger.info(
+      console.log(
         `PUT /product/variant/update/${shopify_variant_id} - Actualizando variante`
       );
 
@@ -111,7 +111,7 @@ export class VariantController {
   ): Promise<void> => {
     try {
       const { shopify_variant_id } = req.params;
-      logger.info(
+      console.log(
         `PUT /product/variant/delete/${shopify_variant_id} - Desactivando variante`
       );
 
@@ -132,7 +132,7 @@ export class VariantController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      logger.info(
+      console.log(
         'POST /product/variants/update/price - Actualizando precios en masa'
       );
 

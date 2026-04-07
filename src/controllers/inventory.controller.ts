@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { IInventoryService } from '../types';
-import { logger } from '../config/logger.config';
 
 export class InventoryController {
     constructor(private readonly inventoryService: IInventoryService) { }
@@ -14,7 +13,7 @@ export class InventoryController {
             const first = Number(req.query.first || 50);
             const after = typeof req.query.after === 'string' ? req.query.after : undefined;
 
-            logger.info('GET /inventory/products - Listado inventario productos', { first, after });
+            console.log('GET /inventory/products - Listado inventario productos', { first, after });
 
             const page = await this.inventoryService.listProductsInventory(first, after);
 
@@ -37,7 +36,7 @@ export class InventoryController {
     ): Promise<void> => {
         try {
             const { product_id } = req.params;
-            logger.info(`GET /inventory/products/${product_id} - Inventario producto`);
+            console.log(`GET /inventory/products/${product_id} - Inventario producto`);
 
             const product = await this.inventoryService.showProductInventory(product_id);
 
@@ -58,16 +57,36 @@ export class InventoryController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const { product_id } = req.params;
             const update = req.body;
 
-            logger.info(`PUT /inventory/products/${product_id} - Actualizar inventario producto`);
+            console.log(`PUT /inventory/products/variants - Actualizar inventario producto`);
 
-            await this.inventoryService.updateProductInventory(product_id, update);
+            await this.inventoryService.updateProductInventory(update.productId, update);
 
             res.status(200).json({
                 success: true,
                 message: 'Inventario de producto actualizado exitosamente',
+            });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    updateProductPrices = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const update = req.body;
+
+            console.log(`PUT /inventory/products/prices - Actualizar precios de producto`);
+
+            await this.inventoryService.updateProductPrices(update.productId, update);
+
+            res.status(200).json({
+                success: true,
+                message: 'Precios de producto actualizados exitosamente',
             });
         } catch (error) {
             next(error);
@@ -81,7 +100,7 @@ export class InventoryController {
     ): Promise<void> => {
         try {
             const { product_id } = req.params;
-            logger.info(`GET /inventory/variants/${product_id} - Listado inventario variantes`);
+            console.log(`GET /inventory/variants/${product_id} - Listado inventario variantes`);
 
             const variants = await this.inventoryService.listVariantsInventory(product_id);
 
@@ -102,7 +121,7 @@ export class InventoryController {
     ): Promise<void> => {
         try {
             const { variant_id } = req.params;
-            logger.info(`GET /inventory/variant/${variant_id} - Inventario variante`);
+            console.log(`GET /inventory/variant/${variant_id} - Inventario variante`);
 
             const variant = await this.inventoryService.showVariantInventory(variant_id);
 
@@ -126,7 +145,7 @@ export class InventoryController {
             const { variant_id } = req.params;
             const { inventoryQuantity, locationId } = req.body;
 
-            logger.info(`PUT /inventory/variant/${variant_id} - Actualizar inventario variante`);
+            console.log(`PUT /inventory/variant/${variant_id} - Actualizar inventario variante`);
 
             await this.inventoryService.updateVariantInventory({
                 shopifyVariantId: variant_id,
@@ -150,7 +169,7 @@ export class InventoryController {
     ): Promise<void> => {
         try {
             const { updates } = req.body;
-            logger.info('POST /inventory/variants/bulk-update - Actualizar inventario variantes en masa');
+            console.log('POST /inventory/variants/bulk-update - Actualizar inventario variantes en masa');
 
             await this.inventoryService.bulkUpdateVariantsInventory(updates);
 

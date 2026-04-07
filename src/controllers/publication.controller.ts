@@ -12,7 +12,7 @@ export class PublicationController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            logger.info('GET /publications - Obteniendo lista de publicaciones');
+            console.log('GET /publications - Obteniendo lista de publicaciones');
 
             const publications = await this.publicationService.getAllPublications();
 

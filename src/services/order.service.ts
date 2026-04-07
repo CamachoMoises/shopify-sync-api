@@ -177,7 +177,7 @@ export class OrderService implements IOrderService {
 
   async getAllOrders(): Promise<Order[]> {
     try {
-      logger.info('Obteniendo todas las órdenes de Shopify');
+      console.log('Obteniendo todas las órdenes de Shopify');
 
       const response = await this.shopifyClient.request<
         ShopifyResponse<OrdersData>
@@ -193,17 +193,17 @@ export class OrderService implements IOrderService {
         this.mapShopifyOrderToOrder(edge.node)
       );
 
-      logger.info(`Obtenidas ${orders.length} órdenes`);
+      console.log(`Obtenidas ${orders.length} órdenes`);
       return orders;
     } catch (error) {
-      logger.error('Error obteniendo órdenes', { error });
+      console.error('Error obteniendo órdenes', { error });
       throw error;
     }
   }
 
   async getOrderProducts(orderId: string): Promise<LineItem[]> {
     try {
-      logger.info('Obteniendo productos de la orden', { orderId });
+      console.log('Obteniendo productos de la orden', { orderId });
 
       const response = await this.shopifyClient.request<
         ShopifyResponse<OrderProductsData>
@@ -223,12 +223,12 @@ export class OrderService implements IOrderService {
         this.mapShopifyLineItemToLineItem(edge.node)
       );
 
-      logger.info(`Obtenidos ${lineItems.length} productos de la orden`, {
+      console.log(`Obtenidos ${lineItems.length} productos de la orden`, {
         orderId
       });
       return lineItems;
     } catch (error) {
-      logger.error('Error obteniendo productos de la orden', {
+      console.error('Error obteniendo productos de la orden', {
         orderId,
         error
       });

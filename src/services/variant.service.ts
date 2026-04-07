@@ -100,15 +100,15 @@ const CREATE_VARIANT_MUTATION = `
 `;
 
 const UPDATE_VARIANT_MUTATION = `
-  mutation UpdateVariant($input: ProductVariantInput!) {
-    productVariantUpdate(input: $input) {
-      productVariant {
+  mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+    productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+      productVariants {
         id
+        sku
+        price
+        inventoryItem { id }
       }
-      userErrors {
-        field
-        message
-      }
+      userErrors { field message }
     }
   }
 `;
@@ -163,8 +163,13 @@ interface CreateVariantData {
 }
 
 interface UpdateVariantData {
-  productVariantUpdate: {
-    productVariant: { id: string } | null;
+  productVariantsBulkUpdate: {
+    productVariants: Array<{
+      id: string;
+      sku: string;
+      price: string;
+      inventoryItem: { id: string } | null;
+    }>;
     userErrors: Array<{ field: string[]; message: string }>;
   };
 }
@@ -185,6 +190,15 @@ interface BulkUpdatePricesData {
     }>;
     userErrors: Array<{ field: string[]; message: string }>;
   };
+}
+
+interface GetVariantData {
+  node: {
+    id: string;
+    product: {
+      id: string;
+    } | null;
+  } | null;
 }
 
 function formatShopifyId(id: string, type: string): string {
@@ -224,7 +238,7 @@ export class VariantService implements IVariantService {
 
   async getVariantsByProductId(productId: string): Promise<ProductVariant[]> {
     try {
-      logger.info('Obteniendo variantes del producto', { productId });
+      console.log('Obteniendo variantes del producto', { productId });
 
       const response = await this.shopifyClient.request<
         ShopifyResponse<VariantsData>
@@ -244,17 +258,17 @@ export class VariantService implements IVariantService {
         this.mapShopifyVariantToVariant(edge.node, productId)
       );
 
-      logger.info(`Obtenidas ${variants.length} variantes`, { productId });
+      console.log(`Obtenidas ${variants.length} variantes`, { productId });
       return variants;
     } catch (error) {
-      logger.error('Error obteniendo variantes', { productId, error });
+      console.error('Error obteniendo variantes', { productId, error });
       throw error;
     }
   }
 
   async getVariantById(variantId: string): Promise<ProductVariant | null> {
     try {
-      logger.info('Obteniendo variante', { variantId });
+      console.log('Obteniendo variante', { variantId });
 
       const response = await this.shopifyClient.request<
         ShopifyResponse<VariantData>
@@ -276,7 +290,7 @@ export class VariantService implements IVariantService {
         node.product?.id || ''
       );
     } catch (error) {
-      logger.error('Error obteniendo variante', { variantId, error });
+      console.error('Error obteniendo variante', { variantId, error });
       throw error;
     }
   }
@@ -286,7 +300,7 @@ export class VariantService implements IVariantService {
     input: CreateVariantInput
   ): Promise<string> {
     try {
-      logger.info('Creando variante', { productId, title: input.title });
+      console.log('Creando variante', { productId, title: input.title });
 
       const response = await this.shopifyClient.request<
         ShopifyResponse<CreateVariantData>
@@ -329,13 +343,13 @@ export class VariantService implements IVariantService {
         throw new ShopifyAPIError('No se pudo crear la variante');
       }
 
-      logger.info('Variante creada exitosamente', {
+      console.log('Variante creada exitosamente', {
         variantId: productVariant.id
       });
 
       return productVariant.id;
     } catch (error) {
-      logger.error('Error creando variante', { productId, error });
+      console.error('Error creando variante', { productId, error });
       throw error;
     }
   }
@@ -345,25 +359,47 @@ export class VariantService implements IVariantService {
     input: UpdateVariantInput
   ): Promise<void> {
     try {
-      logger.info('Actualizando variante', { variantId });
+      console.log('Actualizando variante', { variantId });
+
+      let productId = input.productId;
+
+      if (!productId) {
+        const variantResponse = await this.shopifyClient.request<
+          ShopifyResponse<GetVariantData>
+        >(GET_VARIANT_QUERY, { id: formatShopifyId(variantId, 'ProductVariant') });
+
+        if (variantResponse.errors && variantResponse.errors.length > 0) {
+          throw new ShopifyAPIError(
+            `Error obteniendo variante: ${variantResponse.errors[0].message}`
+          );
+        }
+
+        productId = variantResponse.data.node?.product?.id;
+        if (!productId) {
+          throw new NotFoundError(`No se encontró producto para la variante ${variantId}`);
+        }
+      }
 
       const response = await this.shopifyClient.request<
         ShopifyResponse<UpdateVariantData>
       >(UPDATE_VARIANT_MUTATION, {
-        input: {
-          id: formatShopifyId(variantId, 'ProductVariant'),
-          price: input.price,
-          sku: input.sku,
-          compareAtPrice: input.compareAtPrice,
-          inventoryQuantities: input.inventoryQuantity
-            ? [
-              {
-                availableQuantity: input.inventoryQuantity,
-                locationId: input.locationId || '',
-              },
-            ]
-            : undefined,
-        },
+        productId,
+        variants: [
+          {
+            id: formatShopifyId(variantId, 'ProductVariant'),
+            price: input.price,
+            sku: input.sku,
+            compareAtPrice: input.compareAtPrice,
+            inventoryQuantities: input.inventoryQuantity
+              ? [
+                {
+                  availableQuantity: input.inventoryQuantity,
+                  locationId: input.locationId || '',
+                },
+              ]
+              : undefined,
+          },
+        ],
       });
 
       if (response.errors && response.errors.length > 0) {
@@ -372,7 +408,7 @@ export class VariantService implements IVariantService {
         );
       }
 
-      const { userErrors } = response.data.productVariantUpdate;
+      const { userErrors } = response.data.productVariantsBulkUpdate;
 
       if (userErrors.length > 0) {
         throw new BadRequestError(
@@ -380,16 +416,16 @@ export class VariantService implements IVariantService {
         );
       }
 
-      logger.info('Variante actualizada exitosamente', { variantId });
+      console.log('Variante actualizada exitosamente', { variantId });
     } catch (error) {
-      logger.error('Error actualizando variante', { variantId, error });
+      console.error('Error actualizando variante', { variantId, error });
       throw error;
     }
   }
 
   async deleteVariant(variantId: string): Promise<void> {
     try {
-      logger.info('Desactivando variante', { variantId });
+      console.log('Desactivando variante', { variantId });
 
       const response = await this.shopifyClient.request<
         ShopifyResponse<DeleteVariantData>
@@ -409,16 +445,16 @@ export class VariantService implements IVariantService {
         );
       }
 
-      logger.info('Variante desactivada exitosamente', { variantId });
+      console.log('Variante desactivada exitosamente', { variantId });
     } catch (error) {
-      logger.error('Error desactivando variante', { variantId, error });
+      console.error('Error desactivando variante', { variantId, error });
       throw error;
     }
   }
 
   async bulkUpdatePrices(updates: BulkPriceUpdateInput[]): Promise<void> {
     try {
-      logger.info('Actualizando precios en masa', { count: updates.length });
+      console.log('Actualizando precios en masa', { count: updates.length });
 
       // Group updates by product ID since productVariantsBulkUpdate requires productId
       const updatesByProduct = new Map<string, BulkPriceUpdateInput[]>();
@@ -438,7 +474,7 @@ export class VariantService implements IVariantService {
         for (let i = 0; i < productUpdates.length; i += BATCH_SIZE) {
           const batch = productUpdates.slice(i, i + BATCH_SIZE);
 
-          logger.info(`Procesando batch para producto ${productId}`, {
+          console.log(`Procesando batch para producto ${productId}`, {
             batchSize: batch.length,
           });
 
@@ -476,11 +512,11 @@ export class VariantService implements IVariantService {
         }
       }
 
-      logger.info('Precios actualizados exitosamente', {
+      console.log('Precios actualizados exitosamente', {
         totalUpdates: updates.length
       });
     } catch (error) {
-      logger.error('Error actualizando precios en masa', { error });
+      console.error('Error actualizando precios en masa', { error });
       throw error;
     }
   }

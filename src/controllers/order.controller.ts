@@ -4,7 +4,7 @@ import { logger } from '../config/logger.config';
 
 // Controlador de Órdenes - Maneja HTTP requests (SRP)
 export class OrderController {
-  constructor(private readonly orderService: IOrderService) {}
+  constructor(private readonly orderService: IOrderService) { }
 
   getAllOrders = async (
     _req: Request,
@@ -12,7 +12,7 @@ export class OrderController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      logger.info('GET /orders - Sincronizando órdenes desde Shopify');
+      console.log('GET /orders - Sincronizando órdenes desde Shopify');
 
       const orders = await this.orderService.getAllOrders();
 
@@ -34,7 +34,7 @@ export class OrderController {
   ): Promise<void> => {
     try {
       const { order_id } = req.params;
-      logger.info(
+      console.log(
         `GET /order/products/${order_id} - Obteniendo productos de la orden`
       );
 

@@ -4,7 +4,7 @@ import { logger } from '../config/logger.config';
 
 // Controlador de Imágenes - Maneja HTTP requests (SRP)
 export class ImageController {
-  constructor(private readonly imageService: IImageService) {}
+  constructor(private readonly imageService: IImageService) { }
 
   getImagesByProductId = async (
     req: Request,
@@ -13,7 +13,7 @@ export class ImageController {
   ): Promise<void> => {
     try {
       const { product_id } = req.params;
-      logger.info(
+      console.log(
         `GET /product/images/${product_id} - Obteniendo imágenes del producto`
       );
 
@@ -36,7 +36,7 @@ export class ImageController {
   ): Promise<void> => {
     try {
       const { product_id, shopify_variant_id } = req.params;
-      logger.info(
+      console.log(
         `POST /product/images/add/${product_id}/${shopify_variant_id} - Agregando imagen a variante`
       );
 

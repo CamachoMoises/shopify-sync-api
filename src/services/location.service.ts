@@ -1,8 +1,8 @@
-import { 
-  ILocationService, 
+import {
+  ILocationService,
   IShopifyClient,
   Location,
-  ShopifyResponse 
+  ShopifyResponse
 } from '../types';
 import { logger } from '../config/logger.config';
 import { ShopifyAPIError } from '../middleware/error.middleware';
@@ -56,11 +56,11 @@ interface ShopifyLocationNode {
 
 // Servicio de Locaciones - Implementa ILocationService (DIP + SRP)
 export class LocationService implements ILocationService {
-  constructor(private readonly shopifyClient: IShopifyClient) {}
+  constructor(private readonly shopifyClient: IShopifyClient) { }
 
   async getAllLocations(): Promise<Location[]> {
     try {
-      logger.info('Obteniendo todas las locaciones de Shopify');
+      console.log('Obteniendo todas las locaciones de Shopify');
 
       const response = await this.shopifyClient.request<
         ShopifyResponse<LocationsData>
@@ -77,22 +77,22 @@ export class LocationService implements ILocationService {
         name: edge.node.name,
         address: edge.node.address
           ? {
-              address1: edge.node.address.address1 || undefined,
-              address2: edge.node.address.address2 || undefined,
-              city: edge.node.address.city || undefined,
-              province: edge.node.address.province || undefined,
-              country: edge.node.address.country || undefined,
-              zip: edge.node.address.zip || undefined,
-              phone: edge.node.address.phone || undefined,
-            }
+            address1: edge.node.address.address1 || undefined,
+            address2: edge.node.address.address2 || undefined,
+            city: edge.node.address.city || undefined,
+            province: edge.node.address.province || undefined,
+            country: edge.node.address.country || undefined,
+            zip: edge.node.address.zip || undefined,
+            phone: edge.node.address.phone || undefined,
+          }
           : undefined,
         isActive: edge.node.isActive,
       }));
 
-      logger.info(`Obtenidas ${locations.length} locaciones`);
+      console.log(`Obtenidas ${locations.length} locaciones`);
       return locations;
     } catch (error) {
-      logger.error('Error obteniendo locaciones', { error });
+      console.error('Error obteniendo locaciones', { error });
       throw error;
     }
   }

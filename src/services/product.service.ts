@@ -5,7 +5,8 @@ import {
   ProductPage,
   CreateProductInput,
   UpdateProductInput,
-  ShopifyResponse
+  ShopifyResponse,
+  AddVariantsPayload
 } from '../types';
 import { logger } from '../config/logger.config';
 import { ShopifyAPIError, NotFoundError } from '../middleware/error.middleware';
@@ -589,7 +590,7 @@ export class ProductService implements IProductService {
       console.log(`Obtenidos ${allProducts.length} productos`);
       return allProducts;
     } catch (error) {
-      logger.error('Error obteniendo productos', { error });
+      console.error('Error obteniendo productos', { error });
       throw error;
     }
   }
@@ -626,7 +627,7 @@ export class ProductService implements IProductService {
         },
       };
     } catch (error) {
-      logger.error('Error obteniendo página de productos', { error });
+      console.error('Error obteniendo página de productos', { error });
       throw error;
     }
   }
@@ -655,7 +656,7 @@ export class ProductService implements IProductService {
 
       return this.mapShopifyProductToProduct(response.data.product);
     } catch (error) {
-      logger.error('Error obteniendo producto', { productId, error });
+      console.error('Error obteniendo producto', { productId, error });
       throw error;
     }
   }
@@ -978,7 +979,7 @@ export class ProductService implements IProductService {
 
       console.log('Producto actualizado exitosamente', { productId });
     } catch (error) {
-      logger.error('Error actualizando producto', { productId, error });
+      console.error('Error actualizando producto', { productId, error });
       throw error;
     }
   }
@@ -1033,7 +1034,110 @@ export class ProductService implements IProductService {
         count: payload.variants.length,
       });
     } catch (error) {
-      logger.error('Error actualizando variantes', { error });
+      console.error('Error actualizando variantes', { error });
+      throw error;
+    }
+  }
+
+  async addVariants(payload: AddVariantsPayload): Promise<void> {
+    try {
+      console.log('Agregando variantes al producto', {
+        productId: payload.productId,
+        variantCount: payload.variants.length,
+      });
+
+      const variantsInput = payload.variants.map((variant) => {
+        const variantData: Record<string, unknown> = {
+          price: variant.price,
+        };
+
+        if (variant.sku) {
+          variantData.inventoryItem = { sku: variant.sku };
+        }
+
+        if (variant.compareAtPrice) {
+          variantData.compareAtPrice = variant.compareAtPrice;
+        }
+
+        if (variant.optionValues && variant.optionValues.length > 0) {
+          variantData.optionValues = variant.optionValues.map((ov) => ({
+            optionName: ov.optionName,
+            name: ov.name,
+          }));
+        }
+
+        return variantData;
+      });
+
+      const createResponse = await this.shopifyClient.request<
+        ShopifyResponse<CreateVariantsData>
+      >(CREATE_VARIANTS_MUTATION, {
+        productId: payload.productId,
+        variants: variantsInput,
+      });
+
+      if (createResponse.errors && createResponse.errors.length > 0) {
+        throw new ShopifyAPIError(
+          `Error de Shopify: ${createResponse.errors[0].message}`
+        );
+      }
+
+      const createUserErrors = createResponse.data.productVariantsBulkCreate.userErrors;
+      if (createUserErrors.length > 0) {
+        throw new BadRequestError(
+          `Error creando variantes: ${createUserErrors[0].message}`
+        );
+      }
+
+      const createdVariants = createResponse.data.productVariantsBulkCreate.productVariants ?? [];
+
+      const inventoryChanges = payload.variants
+        .filter((v) => v.inventoryQuantity !== undefined && v.inventoryQuantity > 0 && v.locationId)
+        .map((v, index) => {
+          const match = createdVariants[index];
+          if (!match?.inventoryItem?.id) {
+            console.warn('No se encontró inventoryItem para variante creada', { sku: v.sku });
+            return null;
+          }
+          return {
+            inventoryItemId: match.inventoryItem.id,
+            locationId: v.locationId!,
+            delta: v.inventoryQuantity!,
+          };
+        })
+        .filter(Boolean);
+
+      if (inventoryChanges.length > 0) {
+        const inventoryResponse = await this.shopifyClient.request<
+          ShopifyResponse<InventoryAdjustData>
+        >(INVENTORY_ADJUST_MUTATION, {
+          input: {
+            reason: 'correction',
+            name: 'available',
+            changes: inventoryChanges,
+          },
+        });
+
+        if (inventoryResponse.errors && inventoryResponse.errors.length > 0) {
+          throw new ShopifyAPIError(
+            `Error de Shopify: ${inventoryResponse.errors[0].message}`
+          );
+        }
+
+        const invUserErrors = inventoryResponse.data.inventoryAdjustQuantities.userErrors;
+        if (invUserErrors.length > 0) {
+          throw new BadRequestError(
+            `Error ajustando inventario: ${invUserErrors[0].message}`
+          );
+        }
+      }
+
+      console.log('Variantes agregadas exitosamente', {
+        productId: payload.productId,
+        count: createdVariants.length,
+      });
+    } catch (error) {
+      console.error('Error agregando variantes', { error });
       throw error;
     }
   }
@@ -1070,7 +1174,7 @@ export class ProductService implements IProductService {
         count: variantIds.length,
       });
     } catch (error) {
-      logger.error('Error eliminando variantes', { error });
+      console.error('Error eliminando variantes', { error });
       throw error;
     }
   }
@@ -1104,7 +1208,7 @@ export class ProductService implements IProductService {
 
       console.log('Producto desactivado exitosamente', { productId });
     } catch (error) {
-      logger.error('Error desactivando producto', { productId, error });
+      console.error('Error desactivando producto', { productId, error });
       throw error;
     }
   }
@@ -1217,7 +1321,7 @@ export class ProductService implements IProductService {
       });
 
     } catch (error) {
-      logger.error('Error actualizando imágenes de variantes', { error });
+      console.error('Error actualizando imágenes de variantes', { error });
       throw error;
     }
   }

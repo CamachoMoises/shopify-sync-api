@@ -53,7 +53,7 @@ export class PublicationService {
 
     async getAllPublications(): Promise<Publication[]> {
         try {
-            logger.info('Obteniendo todas las publicaciones de Shopify');
+            console.log('Obteniendo todas las publicaciones de Shopify');
 
             const response = await this.shopifyClient.request<
                 ShopifyResponse<PublicationsData>
@@ -73,10 +73,10 @@ export class PublicationService {
                 supportsFuturePublishing: edge.node.supportsFuturePublishing,
             }));
 
-            logger.info(`Obtenidas ${publications.length} publicaciones`);
+            console.log(`Obtenidas ${publications.length} publicaciones`);
             return publications;
         } catch (error) {
-            logger.error('Error obteniendo publicaciones', { error });
+            console.error('Error obteniendo publicaciones', { error });
             throw error;
         }
     }
