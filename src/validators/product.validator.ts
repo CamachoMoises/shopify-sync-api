@@ -1,29 +1,39 @@
 import { z } from 'zod';
 
-// Esquema para opciones de variante
-const variantOptionSchema = z.object({
-  name: z.string().min(1, 'El nombre de la opción es requerido'),
-  value: z.string().min(1, 'El valor de la opción es requerido'),
+const variantOptionValueSchema = z.object({
+  optionName: z.string().min(1, 'El nombre de la opción es requerido'),
+  name: z.string().min(1, 'El valor de la opción es requerido'),
 });
 
-// Esquema para crear variante
+const productOptionValueSchema = z.object({
+  name: z.string().min(1, 'El nombre del valor de opción es requerido'),
+});
+
+const productOptionSchema = z.object({
+  name: z.string().min(1, 'El nombre de la opción es requerido'),
+  values: z.array(productOptionValueSchema).min(1, 'Al menos un valor de opción es requerido'),
+});
+
 export const createVariantSchema = z.object({
-  title: z.string().min(1, 'El título de la variante es requerido'),
+  title: z.string().optional(),
   sku: z.string().optional(),
   price: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Precio debe ser un número válido'),
   compareAtPrice: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
   inventoryQuantity: z.number().int().min(0).optional(),
-  options: z.array(variantOptionSchema).optional(),
+  locationId: z.string().optional(),
+  optionValues: z.array(variantOptionValueSchema).optional(),
 });
 
-// Esquema para crear producto
 export const createProductSchema = z.object({
   title: z.string().min(1, 'El título es requerido'),
   description: z.string().optional(),
   vendor: z.string().optional(),
   productType: z.string().optional(),
   tags: z.array(z.string()).optional(),
+  options: z.array(productOptionSchema).optional(),
   variants: z.array(createVariantSchema).min(1, 'Al menos una variante es requerida'),
+  publishToPublications: z.boolean().optional(),
+  publicationIds: z.array(z.string()).optional(),
 });
 
 // Esquema para actualizar producto

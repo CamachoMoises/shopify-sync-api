@@ -51,7 +51,10 @@ export interface CreateProductInput {
   vendor?: string;
   productType?: string;
   tags?: string[];
-  variants: CreateVariantInput[];
+  options?: ProductOptionInput[];
+  variants?: CreateVariantInput[];
+  publishToPublications?: boolean;
+  publicationIds?: string[];
 }
 
 export interface UpdateProductInput {
@@ -87,12 +90,27 @@ export interface VariantOption {
 }
 
 export interface CreateVariantInput {
-  title: string;
+  title?: string;
   sku?: string;
   price: string;
   compareAtPrice?: string;
   inventoryQuantity?: number;
-  options?: VariantOption[];
+  locationId?: string;
+  optionValues?: VariantOptionValueInput[];
+}
+
+export interface VariantOptionValueInput {
+  optionName: string;
+  name: string;
+}
+
+export interface ProductOptionInput {
+  name: string;
+  values: ProductOptionValueInput[];
+}
+
+export interface ProductOptionValueInput {
+  name: string;
 }
 
 export interface UpdateVariantInput {
@@ -201,6 +219,22 @@ export interface LocationAddress {
 }
 
 // ============================================
+// PUBLICACIONES
+// ============================================
+
+export interface Publication {
+  id: string;
+  name: string;
+  catalog?: PublicationCatalog;
+  supportsFuturePublishing: boolean;
+}
+
+export interface PublicationCatalog {
+  id: string;
+  title: string;
+}
+
+// ============================================
 // INTERFACES DE SERVICIOS (DIP)
 // ============================================
 
@@ -269,6 +303,10 @@ export interface IImageService {
 
 export interface ILocationService {
   getAllLocations(): Promise<Location[]>;
+}
+
+export interface IPublicationService {
+  getAllPublications(): Promise<Publication[]>;
 }
 
 export interface IShopifyClient {

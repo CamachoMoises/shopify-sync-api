@@ -90,64 +90,24 @@ const GET_PRODUCTS_QUERY = `
   }
 `;
 
-const GET_PRODUCT_QUERY = `
-  query GetProduct($id: ID!) {
+const GET_PRODUCT_WITH_OPTIONS_AND_VARIANTS_QUERY = `
+  query GetProductWithOptionsAndVariants($id: ID!) {
     product(id: $id) {
       id
       title
-      description
-      vendor
-      productType
-      tags
-      status
-      publishedAt
-      createdAt
-      updatedAt
-      variants(first: 100) {
-        edges {
-          node {
-            id
-            title
-            sku
-            price
-            compareAtPrice
-            inventoryQuantity
-            inventoryItem {
-              id
-              inventoryLevels(first: 1) {
-                edges {
-                  node {
-                    location {
-                      id
-                    }
-                  }
-                }
-              }
-            }
-            selectedOptions {
-              name
-              value
-            }
-          }
-        }
+      options {
+        id
+        name
+        values
       }
-      images(first: 100) {
-        edges {
-          node {
-            id
-            url
-            altText
-          }
-        }
-      }
-      resourcePublications(first: 100) {
-        edges {
-          node {
-            publication {
-              id
-              name
-            }
-            publishDate
+      variants(first: 50) {
+        nodes {
+          id
+          title
+          sku
+          selectedOptions {
+            name
+            value
           }
         }
       }
@@ -156,15 +116,94 @@ const GET_PRODUCT_QUERY = `
 `;
 
 const CREATE_PRODUCT_MUTATION = `
-  mutation CreateProduct($input: ProductInput!) {
+  mutation productCreate($input: ProductInput!) {
     productCreate(input: $input) {
       product {
         id
+        variants(first: 1) {
+          edges {
+            node {
+              id
+            }
+          }
+        }
+      }
+      userErrors { field message }
+    }
+  }
+`;
+
+
+const CREATE_OPTIONS_MUTATION = `
+  mutation productOptionsCreate($productId: ID!, $options: [OptionCreateInput!]!) {
+    productOptionsCreate(productId: $productId, options: $options) {
+      product {
+        id
+        options {
+          id
+          name
+          optionValues {
+            id
+            name
+          }
+        }
       }
       userErrors {
         field
         message
+        code
       }
+    }
+  }
+`;
+
+
+const CREATE_VARIANTS_MUTATION = `
+  mutation productVariantsBulkCreate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+    productVariantsBulkCreate(productId: $productId, variants: $variants) {
+      productVariants {
+        id
+        sku
+        inventoryItem { id }
+      }
+      userErrors { field message }
+    }
+  }
+`;
+
+const UPDATE_VARIANTS_MUTATION = `
+  mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+    productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+      productVariants {
+        id
+        sku
+        price
+        inventoryItem { id }
+      }
+      userErrors { field message }
+    }
+  }
+`;
+
+const INVENTORY_ADJUST_MUTATION = `
+  mutation inventoryAdjustQuantities($input: InventoryAdjustQuantitiesInput!) {
+    inventoryAdjustQuantities(input: $input) {
+      inventoryAdjustmentGroup { id }
+      userErrors { field message }
+    }
+  }
+`;
+
+const PUBLISH_PRODUCT_MUTATION = `
+  mutation publishablePublish($id: ID!, $input: [PublicationInput!]!) {
+    publishablePublish(id: $id, input: $input) {
+      publishable {
+        ... on Product {
+          id
+          title
+        }
+      }
+      userErrors { field message }
     }
   }
 `;
@@ -211,13 +250,82 @@ interface ProductData {
   product: ShopifyProductNode | null;
 }
 
+interface ProductWithOptionsAndVariantsData {
+  product: {
+    id: string;
+    title: string;
+    options: Array<{
+      id: string;
+      name: string;
+      values: string[];
+    }>;
+    variants: {
+      nodes: Array<{
+        id: string;
+        title: string;
+        sku: string | null;
+        selectedOptions: Array<{
+          name: string;
+          value: string;
+        }>;
+      }>;
+    };
+  } | null;
+}
+
 interface CreateProductData {
   productCreate: {
-    product: { id: string } | null;
+    product: {
+      id: string;
+      variants: {
+        edges: Array<{
+          node: CreatedVariantNode;
+        }>;
+      };
+    } | null;
     userErrors: Array<{ field: string[]; message: string }>;
   };
 }
 
+interface CreateVariantsData {
+  productVariantsBulkCreate: {
+    productVariants: CreatedVariantNode[] | null;
+    userErrors: Array<{ field: string[]; message: string }>;
+  };
+}
+
+interface UpdateVariantsData {
+  productVariantsBulkUpdate: {
+    productVariants: CreatedVariantNode[] | null;
+    userErrors: Array<{ field: string[]; message: string }>;
+  };
+}
+
+interface CreateOptionsData {
+  productOptionsCreate: {
+    product: {
+      id: string;
+      options: Array<{
+        id: string;
+        name: string;
+        optionValues: Array<{ id: string; name: string }>;
+      }>;
+    } | null;
+    userErrors: Array<{ field: string[]; message: string; code?: string }>;
+  };
+}
+interface PublishProductData {
+  publishablePublish: {
+    publishable: { id: string; title: string } | null;
+    userErrors: Array<{ field: string[]; message: string }>;
+  };
+}
+interface InventoryAdjustData {
+  inventoryAdjustQuantities: {
+    inventoryAdjustmentGroup: { id: string } | null;
+    userErrors: Array<{ field: string[]; message: string }>;
+  };
+}
 interface UpdateProductData {
   productUpdate: {
     product: { id: string } | null;
@@ -230,6 +338,12 @@ interface DeleteProductData {
     deletedProductId: string | null;
     userErrors: Array<{ field: string[]; message: string }>;
   };
+}
+
+interface CreatedVariantNode {
+  id: string;
+  sku: string | null;
+  inventoryItem: { id: string } | null;
 }
 
 interface ShopifyProductNode {
@@ -296,7 +410,7 @@ export class ProductService implements IProductService {
 
   async getAllProducts(): Promise<Product[]> {
     try {
-      logger.info('Obteniendo todos los productos de Shopify');
+      console.log('Obteniendo todos los productos de Shopify');
       const allProducts: Product[] = [];
       let after: string | null = null;
       const chunkSize = 50;
@@ -307,7 +421,7 @@ export class ProductService implements IProductService {
         after = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
       } while (after);
 
-      logger.info(`Obtenidos ${allProducts.length} productos`);
+      console.log(`Obtenidos ${allProducts.length} productos`);
       return allProducts;
     } catch (error) {
       logger.error('Error obteniendo productos', { error });
@@ -317,7 +431,7 @@ export class ProductService implements IProductService {
 
   async getProductsPage(first: number, after?: string): Promise<ProductPage> {
     try {
-      logger.info('Obteniendo página de productos de Shopify', { first, after });
+      console.log('Obteniendo página de productos de Shopify', { first, after });
       const variables: { first: number; after?: string } = { first };
       if (after) variables.after = after;
       const response: ShopifyResponse<ProductsData> = await this.shopifyClient.request<
@@ -332,7 +446,7 @@ export class ProductService implements IProductService {
         this.mapShopifyProductToProduct(edge.node)
       );
       const { hasNextPage, endCursor } = response.data.products.pageInfo;
-      logger.info('Page result', {
+      console.log('Page result', {
         productCount: products.length,
         firstProductId: products[0]?.id,
         lastProductId: products[products.length - 1]?.id,
@@ -354,7 +468,7 @@ export class ProductService implements IProductService {
 
   async getProductById(productId: string): Promise<Product | null> {
     try {
-      logger.info('Obteniendo producto por ID', { productId });
+      console.log('Obteniendo producto por ID', { productId });
 
       const formattedId = productId.startsWith('gid://')
         ? productId
@@ -362,7 +476,7 @@ export class ProductService implements IProductService {
 
       const response = await this.shopifyClient.request<
         ShopifyResponse<ProductData>
-      >(GET_PRODUCT_QUERY, { id: formattedId });
+      >(GET_PRODUCTS_QUERY, { id: formattedId });
 
       if (response.errors && response.errors.length > 0) {
         throw new ShopifyAPIError(
@@ -380,27 +494,13 @@ export class ProductService implements IProductService {
       throw error;
     }
   }
-
   async createProduct(input: CreateProductInput): Promise<string> {
     try {
-      logger.info('Creando producto en Shopify', { title: input.title });
 
-      const variantsInput = input.variants.map((variant) => ({
-        price: variant.price,
-        sku: variant.sku,
-        compareAtPrice: variant.compareAtPrice,
-        inventoryQuantities: variant.inventoryQuantity
-          ? [
-            {
-              availableQuantity: variant.inventoryQuantity,
-              locationId: '', // Se debe obtener de locations
-            },
-          ]
-          : undefined,
-        options: variant.options?.map((opt) => opt.value),
-      }));
+      console.log('Creando producto en Shopify', { title: input.title });
 
-      const response = await this.shopifyClient.request<
+      // ─── Paso 1: Crear producto base ───────────────────────────────────────
+      const createProductResponse = await this.shopifyClient.request<
         ShopifyResponse<CreateProductData>
       >(CREATE_PRODUCT_MUTATION, {
         input: {
@@ -409,35 +509,269 @@ export class ProductService implements IProductService {
           vendor: input.vendor,
           productType: input.productType,
           tags: input.tags,
-          variants: variantsInput,
+          status: 'ACTIVE',
         },
       });
 
-      if (response.errors && response.errors.length > 0) {
+
+      if (createProductResponse.errors && createProductResponse.errors.length > 0) {
         throw new ShopifyAPIError(
-          `Error de Shopify: ${response.errors[0].message}`
+          `Error de Shopify: ${createProductResponse.errors[0].message}`
         );
       }
 
-      const { product, userErrors } = response.data.productCreate;
+      const { product, userErrors } = createProductResponse.data.productCreate;
 
       if (userErrors.length > 0) {
-        throw new BadRequestError(
-          `Error creando producto: ${userErrors[0].message}`
-        );
+        throw new BadRequestError(`Error creando producto: ${userErrors[0].message}`);
       }
 
       if (!product) {
         throw new ShopifyAPIError('No se pudo crear el producto');
       }
 
-      logger.info('Producto creado exitosamente', {
-        productId: product.id
-      });
+      const productId = product.id;
+      // console.log('Producto base creado', { productId });
 
-      return product.id;
+      // ─── Paso 2: Crear opciones del producto ────────────────────────────────
+      if (input.options && input.options.length > 0) {
+        const optionsInput = input.options.map((opt) => ({
+          name: opt.name,
+          values: opt.values.map((v) => ({ name: v.name })),
+        }));
+
+        const optionsResponse = await this.shopifyClient.request<
+          ShopifyResponse<CreateOptionsData>
+        >(CREATE_OPTIONS_MUTATION, {
+          productId,
+          options: optionsInput,
+        });
+
+        if (optionsResponse.errors && optionsResponse.errors.length > 0) {
+          throw new ShopifyAPIError(
+            `Error de Shopify: ${optionsResponse.errors[0].message}`
+          );
+        }
+
+        const optionsUserErrors = optionsResponse.data.productOptionsCreate.userErrors;
+        if (optionsUserErrors.length > 0) {
+          throw new BadRequestError(
+            `Error creando opciones: ${optionsUserErrors[0].message}`
+          );
+        }
+
+        // console.log('Opciones creadas', { productId, count: input.options.length });
+      }
+
+      // ─── Paso 3: Verificar producto creado con opciones y variantes ────────
+      const verificationResponse = await this.shopifyClient.request<
+        ShopifyResponse<ProductWithOptionsAndVariantsData>
+      >(GET_PRODUCT_WITH_OPTIONS_AND_VARIANTS_QUERY, { id: productId });
+
+      if (verificationResponse.errors && verificationResponse.errors.length > 0) {
+        logger.warn('Error verificando producto creado', {
+          productId,
+          error: verificationResponse.errors[0].message
+        });
+      } else if (verificationResponse.data.product) {
+        // console.dir(verificationResponse.data.product, { depth: null })
+      }
+      // ─── Paso 4: Crear variantes (excepto la default) ─────────────────────
+      const defaultVariant = verificationResponse.data.product?.variants.nodes[0];
+      const defaultOptionValue = defaultVariant?.selectedOptions[0]?.value;
+
+      const otherVariants = (input.variants ?? []).filter(
+        (v) => !v.optionValues?.some((ov) => ov.name === defaultOptionValue)
+      );
+
+      let variantsResponse: ShopifyResponse<CreateVariantsData> | null = null;
+      let updateResponse: ShopifyResponse<UpdateVariantsData> | null = null;
+
+      if (otherVariants.length > 0) {
+        const variantsInput = otherVariants.map((variant) => {
+          const variantData: Record<string, unknown> = {
+            price: variant.price,
+          };
+
+          if (variant.sku) {
+            variantData.inventoryItem = { sku: variant.sku };
+          }
+
+          if (variant.compareAtPrice) {
+            variantData.compareAtPrice = variant.compareAtPrice;
+          }
+
+          if (variant.optionValues && variant.optionValues.length > 0) {
+            variantData.optionValues = variant.optionValues.map((ov) => ({
+              optionName: ov.optionName,
+              name: ov.name,
+            }));
+          }
+
+          return variantData;
+        });
+
+        variantsResponse = await this.shopifyClient.request<
+          ShopifyResponse<CreateVariantsData>
+        >(CREATE_VARIANTS_MUTATION, {
+          productId,
+          variants: variantsInput,
+        });
+
+        if (variantsResponse.errors && variantsResponse.errors.length > 0) {
+          throw new ShopifyAPIError(
+            `Error de Shopify: ${variantsResponse.errors[0].message}`
+          );
+        }
+
+        const variantsUserErrors = variantsResponse.data.productVariantsBulkCreate.userErrors;
+        if (variantsUserErrors.length > 0) {
+          throw new BadRequestError(
+            `Error creando variantes: ${variantsUserErrors[0].message}`
+          );
+        }
+
+        // console.log('Variantes creadas', {
+        //   productId,
+        //   count: variantsResponse.data.productVariantsBulkCreate.productVariants?.length ?? 0,
+        // });
+      }
+      // ─── Paso 5: Actualizar variante default ──────────────────────────────
+      const defaultInputVariant = (input.variants ?? []).find(
+        (v) => v.optionValues?.some((ov) => ov.name === defaultOptionValue)
+      );
+
+      if (defaultInputVariant && defaultVariant) {
+        const updateData: Record<string, unknown> = {
+          id: defaultVariant.id,
+          price: defaultInputVariant.price,
+          inventoryItem: { tracked: true },
+        };
+
+        if (defaultInputVariant.sku) {
+          updateData.inventoryItem = { tracked: true, sku: defaultInputVariant.sku };
+        }
+
+        if (defaultInputVariant.compareAtPrice) {
+          updateData.compareAtPrice = defaultInputVariant.compareAtPrice;
+        }
+
+        updateResponse = await this.shopifyClient.request<
+          ShopifyResponse<UpdateVariantsData>
+        >(UPDATE_VARIANTS_MUTATION, {
+          productId,
+          variants: [updateData],
+        });
+
+        if (updateResponse.errors && updateResponse.errors.length > 0) {
+          throw new ShopifyAPIError(
+            `Error de Shopify: ${updateResponse.errors[0].message}`
+          );
+        }
+
+        const updateUserErrors = updateResponse.data.productVariantsBulkUpdate.userErrors;
+        if (updateUserErrors.length > 0) {
+          throw new BadRequestError(
+            `Error actualizando variante default: ${updateUserErrors[0].message}`
+          );
+        }
+
+        // console.log('Variante default actualizada', {
+        //   id: defaultVariant.id,
+        //   price: defaultInputVariant.price,
+        //   sku: defaultInputVariant.sku,
+        // });
+      }
+      // ─── Paso 6: Ajustar inventario ───────────────────────────────────────
+      const createdVariants =
+        variantsResponse?.data.productVariantsBulkCreate.productVariants ?? [];
+      const updatedVariant =
+        updateResponse?.data.productVariantsBulkUpdate.productVariants?.[0];
+      const allVariants = [
+        ...createdVariants,
+        ...(updatedVariant ? [updatedVariant] : []),
+      ];
+
+      const inventoryChanges = (input.variants ?? [])
+        .filter((v) => v.inventoryQuantity !== undefined && v.inventoryQuantity > 0 && v.locationId)
+        .map((v) => {
+          const match = allVariants.find((cv) => cv.sku === v.sku);
+          if (!match) {
+            console.warn('No se encontró variante con SKU para inventario', { sku: v.sku });
+            return null;
+          }
+          return {
+            inventoryItemId: match.inventoryItem!.id,
+            locationId: v.locationId,
+            delta: v.inventoryQuantity,
+          };
+        })
+        .filter(Boolean);
+
+      if (inventoryChanges.length > 0) {
+        const inventoryResponse = await this.shopifyClient.request<
+          ShopifyResponse<InventoryAdjustData>
+        >(INVENTORY_ADJUST_MUTATION, {
+          input: {
+            reason: 'correction',
+            name: 'available',
+            changes: inventoryChanges,
+          },
+        });
+
+        if (inventoryResponse.errors && inventoryResponse.errors.length > 0) {
+          throw new ShopifyAPIError(
+            `Error de Shopify: ${inventoryResponse.errors[0].message}`
+          );
+        }
+
+        const invUserErrors = inventoryResponse.data.inventoryAdjustQuantities.userErrors;
+        if (invUserErrors.length > 0) {
+          throw new BadRequestError(
+            `Error ajustando inventario: ${invUserErrors[0].message}`
+          );
+        }
+
+        // console.log('Inventario ajustado', {
+        //   productId,
+        //   variantCount: inventoryChanges.length,
+        // });
+      }
+
+      // ─── Paso 7: Publicar producto ────────────────────────────────────────
+      if (input.publishToPublications && input.publicationIds && input.publicationIds.length > 0) {
+        const publishResponse = await this.shopifyClient.request<
+          ShopifyResponse<PublishProductData>
+        >(PUBLISH_PRODUCT_MUTATION, {
+          id: productId,
+          input: input.publicationIds.map((pubId) => ({
+            publicationId: pubId,
+          })),
+        });
+
+        if (publishResponse.errors && publishResponse.errors.length > 0) {
+          throw new ShopifyAPIError(
+            `Error de Shopify: ${publishResponse.errors[0].message}`
+          );
+        }
+
+        const publishUserErrors = publishResponse.data.publishablePublish.userErrors;
+        if (publishUserErrors.length > 0) {
+          throw new BadRequestError(
+            `Error publicando producto: ${publishUserErrors[0].message}`
+          );
+        }
+
+        console.log('Producto publicado', {
+          productId,
+          publications: input.publicationIds,
+        });
+      }
+
+
+      return productId;
     } catch (error) {
-      logger.error('Error creando producto', { error });
+      console.error('Error creando producto', { error });
       throw error;
     }
   }
@@ -447,7 +781,7 @@ export class ProductService implements IProductService {
     input: UpdateProductInput
   ): Promise<void> {
     try {
-      logger.info('Actualizando producto', { productId });
+      console.log('Actualizando producto', { productId });
 
       const response = await this.shopifyClient.request<
         ShopifyResponse<UpdateProductData>
@@ -477,7 +811,7 @@ export class ProductService implements IProductService {
         );
       }
 
-      logger.info('Producto actualizado exitosamente', { productId });
+      console.log('Producto actualizado exitosamente', { productId });
     } catch (error) {
       logger.error('Error actualizando producto', { productId, error });
       throw error;
@@ -486,7 +820,7 @@ export class ProductService implements IProductService {
 
   async deleteProduct(productId: string): Promise<void> {
     try {
-      logger.info('Desactivando producto', { productId });
+      console.log('Desactivando producto', { productId });
 
       // En Shopify no se eliminan productos, se archivan
       const response = await this.shopifyClient.request<
@@ -511,7 +845,7 @@ export class ProductService implements IProductService {
         );
       }
 
-      logger.info('Producto desactivado exitosamente', { productId });
+      console.log('Producto desactivado exitosamente', { productId });
     } catch (error) {
       logger.error('Error desactivando producto', { productId, error });
       throw error;

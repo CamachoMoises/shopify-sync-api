@@ -126,8 +126,8 @@ const DELETE_VARIANT_MUTATION = `
 `;
 
 const BULK_UPDATE_PRICES_MUTATION = `
-  mutation BulkUpdatePrices($variants: [ProductVariantInput!]!) {
-    productVariantsBulkUpdate(variants: $variants) {
+  mutation BulkUpdatePrices($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+    productVariantsBulkUpdate(productId: $productId, variants: $variants) {
       productVariants {
         id
         price
@@ -296,7 +296,10 @@ export class VariantService implements IVariantService {
           price: input.price,
           sku: input.sku,
           compareAtPrice: input.compareAtPrice,
-          options: input.options?.map((opt) => opt.value),
+          optionValues: input.optionValues?.map((ov) => ({
+            optionName: ov.optionName,
+            name: ov.name,
+          })),
           inventoryQuantities: input.inventoryQuantity
             ? [
               {
@@ -417,45 +420,59 @@ export class VariantService implements IVariantService {
     try {
       logger.info('Actualizando precios en masa', { count: updates.length });
 
-      // Shopify tiene un límite de 100 variantes por operación bulk
-      const BATCH_SIZE = 100;
+      // Group updates by product ID since productVariantsBulkUpdate requires productId
+      const updatesByProduct = new Map<string, BulkPriceUpdateInput[]>();
 
-      for (let i = 0; i < updates.length; i += BATCH_SIZE) {
-        const batch = updates.slice(i, i + BATCH_SIZE);
-
-        logger.info(`Procesando batch ${Math.floor(i / BATCH_SIZE) + 1}`, {
-          batchSize: batch.length,
-        });
-
-        const variantsInput = batch.map((update) => ({
-          id: formatShopifyId(update.shopifyVariantId, 'ProductVariant'),
-          price: update.price,
-          compareAtPrice: update.compareAtPrice,
-        }));
-
-        const response = await this.shopifyClient.request<
-          ShopifyResponse<BulkUpdatePricesData>
-        >(BULK_UPDATE_PRICES_MUTATION, {
-          variants: variantsInput,
-        });
-
-        if (response.errors && response.errors.length > 0) {
-          throw new ShopifyAPIError(
-            `Error de Shopify: ${response.errors[0].message}`
-          );
+      for (const update of updates) {
+        if (!updatesByProduct.has(update.shopifyId)) {
+          updatesByProduct.set(update.shopifyId, []);
         }
+        updatesByProduct.get(update.shopifyId)!.push(update);
+      }
 
-        const { userErrors } = response.data.productVariantsBulkUpdate;
+      // Process each product's variants
+      for (const [productId, productUpdates] of updatesByProduct.entries()) {
+        // Shopify tiene un límite de 100 variantes por operación bulk
+        const BATCH_SIZE = 100;
 
-        if (userErrors.length > 0) {
-          throw new BadRequestError(
-            `Error en actualización masiva: ${userErrors[0].message}`
-          );
-        }
+        for (let i = 0; i < productUpdates.length; i += BATCH_SIZE) {
+          const batch = productUpdates.slice(i, i + BATCH_SIZE);
 
-        // Delay entre batches para no exceder límites de rate limit
-        if (i + BATCH_SIZE < updates.length) {
-          await this.delay(1000);
+          logger.info(`Procesando batch para producto ${productId}`, {
+            batchSize: batch.length,
+          });
+
+          const variantsInput = batch.map((update) => ({
+            id: formatShopifyId(update.shopifyVariantId, 'ProductVariant'),
+            price: update.price,
+            compareAtPrice: update.compareAtPrice,
+          }));
+
+          const response = await this.shopifyClient.request<
+            ShopifyResponse<BulkUpdatePricesData>
+          >(BULK_UPDATE_PRICES_MUTATION, {
+            productId: formatShopifyId(productId, 'Product'),
+            variants: variantsInput,
+          });
+
+          if (response.errors && response.errors.length > 0) {
+            throw new ShopifyAPIError(
+              `Error de Shopify: ${response.errors[0].message}`
+            );
+          }
+
+          const { userErrors } = response.data.productVariantsBulkUpdate;
+
+          if (userErrors.length > 0) {
+            throw new BadRequestError(
+              `Error en actualización masiva: ${userErrors[0].message}`
+            );
+          }
+
+          // Delay entre batches para no exceder límites de rate limit
+          if (i + BATCH_SIZE < productUpdates.length) {
+            await this.delay(1000);
+          }
         }
       }
 

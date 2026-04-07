@@ -14,6 +14,7 @@ import {
   OrderService,
   ImageService,
   LocationService,
+  PublicationService
 } from './services';
 
 // Controladores
@@ -24,6 +25,7 @@ import {
   OrderController,
   ImageController,
   LocationController,
+  PublicationController,
 } from './controllers';
 
 // Rutas
@@ -34,6 +36,7 @@ import {
   createOrderRoutes,
   createImageRoutes,
   createLocationRoutes,
+  createPublicationRoutes,
 } from './routes';
 
 // Middleware
@@ -56,6 +59,7 @@ class DependencyContainer {
   public readonly orderService = new OrderService(this.shopifyClient);
   public readonly imageService = new ImageService(this.shopifyClient);
   public readonly locationService = new LocationService(this.shopifyClient);
+  public readonly publicationService = new PublicationService(this.shopifyClient);
 
   // Controladores
   public readonly productController = new ProductController(
@@ -71,6 +75,9 @@ class DependencyContainer {
   public readonly imageController = new ImageController(this.imageService);
   public readonly locationController = new LocationController(
     this.locationService
+  );
+  public readonly publicationController = new PublicationController(
+    this.publicationService
   );
 }
 
@@ -162,6 +169,12 @@ export const createApp = (): Application => {
   app.use(
     '/locations',
     createLocationRoutes(container.locationController)
+  );
+
+  // Publications
+  app.use(
+    '/publications',
+    createPublicationRoutes(container.publicationController)
   );
 
   // ============================================

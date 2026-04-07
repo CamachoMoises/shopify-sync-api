@@ -5,3 +5,4 @@ export { InventoryService } from './inventory.service';
 export { OrderService } from './order.service';
 export { ImageService } from './image.service';
 export { LocationService } from './location.service';
+export { PublicationService } from './publication.service';
