@@ -185,6 +185,14 @@ const UPDATE_VARIANTS_MUTATION = `
   }
 `;
 
+const DELETE_VARIANTS_MUTATION = `
+  mutation productVariantsBulkDelete($productId: ID!, $variantsIds: [ID!]!) {
+    productVariantsBulkDelete(productId: $productId, variantsIds: $variantsIds) {
+      userErrors { field message }
+    }
+  }
+`;
+
 const INVENTORY_ADJUST_MUTATION = `
   mutation inventoryAdjustQuantities($input: InventoryAdjustQuantitiesInput!) {
     inventoryAdjustQuantities(input: $input) {
@@ -230,6 +238,62 @@ const DELETE_PRODUCT_MUTATION = `
         field
         message
       }
+    }
+  }
+`;
+
+const GET_PRODUCT_MEDIA_QUERY = `
+  query GetProductMedia($id: ID!) {
+    product(id: $id) {
+      media(first: 250) {
+        edges {
+          node {
+            id
+            mediaContentType
+            status
+          }
+        }
+      }
+    }
+  }
+`;
+
+
+const DELETE_PRODUCT_MEDIA_MUTATION = `
+  mutation productDeleteMedia($productId: ID!, $mediaIds: [ID!]!) {
+    productDeleteMedia(productId: $productId, mediaIds: $mediaIds) {
+      deletedMediaIds
+      userErrors { field message }
+    }
+  }
+`;
+
+const CREATE_PRODUCT_MEDIA_MUTATION = `
+  mutation productCreateMedia($productId: ID!, $media: [CreateMediaInput!]!) {
+    productCreateMedia(productId: $productId, media: $media) {
+      media {
+        id
+        mediaContentType
+        status
+      }
+      userErrors { field message }
+    }
+  }
+`;
+
+const ASSIGN_VARIANT_IMAGE_MUTATION = `
+  mutation productVariantAppendMedia(
+    $productId: ID!
+    $variantMedia: [ProductVariantAppendMediaInput!]!
+  ) {
+    productVariantAppendMedia(productId: $productId, variantMedia: $variantMedia) {
+      productVariants {
+        id
+        media(first: 5) {
+          edges { node { id } }
+        }
+      }
+      userErrors { field message }
     }
   }
 `;
@@ -296,9 +360,26 @@ interface CreateVariantsData {
 
 interface UpdateVariantsData {
   productVariantsBulkUpdate: {
-    productVariants: CreatedVariantNode[] | null;
+    productVariants: Array<{
+      id: string;
+      sku: string;
+      price: string;
+      inventoryItem: { id: string } | null;
+    }>;
     userErrors: Array<{ field: string[]; message: string }>;
   };
+}
+
+interface UpdateVariantInput {
+  id: string;
+  price?: string;
+  compareAtPrice?: string;
+  sku?: string;
+  barcode?: string;
+  weight?: number;
+  weightUnit?: 'KILOGRAMS' | 'GRAMS' | 'POUNDS' | 'OUNCES';
+  inventoryPolicy?: 'DENY' | 'CONTINUE';
+  taxable?: boolean;
 }
 
 interface CreateOptionsData {
@@ -336,6 +417,33 @@ interface UpdateProductData {
 interface DeleteProductData {
   productDelete: {
     deletedProductId: string | null;
+    userErrors: Array<{ field: string[]; message: string }>;
+  };
+}
+
+interface UpdateVariantInput {
+  id: string;
+  price?: string;
+  compareAtPrice?: string;
+  sku?: string;
+}
+
+interface UpdateVariantPayload {
+  productId: string;
+  variants: UpdateVariantInput[];
+}
+
+interface DeleteVariantInput {
+  id: string;
+}
+
+interface DeleteVariantPayload {
+  productId: string;
+  variants: DeleteVariantInput[];
+}
+
+interface DeleteVariantsData {
+  productVariantsBulkDelete: {
     userErrors: Array<{ field: string[]; message: string }>;
   };
 }
@@ -401,6 +509,63 @@ interface ShopifyProductNode {
         publishDate: string | null;
       };
     }>;
+  };
+}
+// ============================================
+// IMÁGENES DE VARIANTES
+// ============================================
+
+export interface VariantImageInput {
+  id: string;   // gid://shopify/ProductVariant/...
+  image: string; // URL pública de la imagen
+}
+
+export interface UpdateVariantImagesInput {
+  productId: string;
+  variants: VariantImageInput[];
+}
+
+interface ProductMediaNode {
+  id: string;
+  mediaContentType: string;
+  status: 'UPLOADED' | 'PROCESSING' | 'READY' | 'FAILED';
+}
+
+interface GetProductMediaData {
+  product: {
+    media: {
+      edges: Array<{ node: ProductMediaNode }>;
+    };
+  };
+}
+
+interface DeleteMediaData {
+  productDeleteMedia: {
+    deletedMediaIds: string[];
+    userErrors: Array<{ field: string[]; message: string }>;
+  };
+}
+
+interface CreateMediaData {
+  productCreateMedia: {
+    media: Array<{
+      id: string;
+      mediaContentType: string;
+      status: string;
+    }>;
+    userErrors: Array<{ field: string[]; message: string }>;
+  };
+}
+
+interface AssignVariantImageData {
+  productVariantAppendMedia: {
+    productVariants: Array<{
+      id: string;
+      media: {
+        edges: Array<{ node: { id: string } }>;
+      };
+    }>;
+    userErrors: Array<{ field: string[]; message: string }>;
   };
 }
 
@@ -818,6 +983,98 @@ export class ProductService implements IProductService {
     }
   }
 
+  async updateVariant(payload: UpdateVariantPayload): Promise<void> {
+    try {
+      console.log('Actualizando variantes', { productId: payload.productId });
+
+      const variantsInput = payload.variants.map((variant) => {
+        const variantData: Record<string, unknown> = {
+          id: variant.id,
+        };
+
+        if (variant.price) {
+          variantData.price = variant.price;
+        }
+
+        if (variant.compareAtPrice) {
+          variantData.compareAtPrice = variant.compareAtPrice;
+        }
+
+        if (variant.sku) {
+          variantData.inventoryItem = { sku: variant.sku };
+        }
+
+        return variantData;
+      });
+
+      const response = await this.shopifyClient.request<
+        ShopifyResponse<UpdateVariantsData>
+      >(UPDATE_VARIANTS_MUTATION, {
+        productId: payload.productId,
+        variants: variantsInput,
+      });
+
+      if (response.errors && response.errors.length > 0) {
+        throw new ShopifyAPIError(
+          `Error de Shopify: ${response.errors[0].message}`
+        );
+      }
+
+      const { userErrors } = response.data.productVariantsBulkUpdate;
+
+      if (userErrors.length > 0) {
+        throw new BadRequestError(
+          `Error actualizando variantes: ${userErrors[0].message}`
+        );
+      }
+
+      console.log('Variantes actualizadas exitosamente', {
+        productId: payload.productId,
+        count: payload.variants.length,
+      });
+    } catch (error) {
+      logger.error('Error actualizando variantes', { error });
+      throw error;
+    }
+  }
+
+  async deleteVariant(payload: DeleteVariantPayload): Promise<void> {
+    try {
+      console.log('Eliminando variantes', { productId: payload.productId });
+
+      const variantIds = payload.variants.map((v) => v.id);
+
+      const response = await this.shopifyClient.request<
+        ShopifyResponse<DeleteVariantsData>
+      >(DELETE_VARIANTS_MUTATION, {
+        productId: payload.productId,
+        variantsIds: variantIds,
+      });
+
+      if (response.errors && response.errors.length > 0) {
+        throw new ShopifyAPIError(
+          `Error de Shopify: ${response.errors[0].message}`
+        );
+      }
+
+      const { userErrors } = response.data.productVariantsBulkDelete;
+
+      if (userErrors.length > 0) {
+        throw new BadRequestError(
+          `Error eliminando variantes: ${userErrors[0].message}`
+        );
+      }
+
+      console.log('Variantes eliminadas exitosamente', {
+        productId: payload.productId,
+        count: variantIds.length,
+      });
+    } catch (error) {
+      logger.error('Error eliminando variantes', { error });
+      throw error;
+    }
+  }
+
   async deleteProduct(productId: string): Promise<void> {
     try {
       console.log('Desactivando producto', { productId });
@@ -848,6 +1105,119 @@ export class ProductService implements IProductService {
       console.log('Producto desactivado exitosamente', { productId });
     } catch (error) {
       logger.error('Error desactivando producto', { productId, error });
+      throw error;
+    }
+  }
+
+  async updateVariantImages(input: UpdateVariantImagesInput): Promise<void> {
+    try {
+      console.log('Iniciando actualización de imágenes de variantes', {
+        productId: input.productId,
+        variantCount: input.variants.length,
+      });
+
+      // ─── Paso 1: Obtener imágenes existentes ──────────────────────────
+      const mediaResponse = await this.shopifyClient.request<
+        ShopifyResponse<GetProductMediaData>
+      >(GET_PRODUCT_MEDIA_QUERY, { id: input.productId });
+
+      if (mediaResponse.errors && mediaResponse.errors.length > 0) {
+        throw new ShopifyAPIError(
+          `Error obteniendo media: ${mediaResponse.errors[0].message}`
+        );
+      }
+
+      const existingMediaIds = mediaResponse.data.product.media.edges.map(
+        (edge) => edge.node.id
+      );
+
+      // ─── Paso 2: Eliminar imágenes existentes ─────────────────────────
+      if (existingMediaIds.length > 0) {
+        console.log(`Eliminando ${existingMediaIds.length} imágenes previas`);
+
+        const deleteResponse = await this.shopifyClient.request<
+          ShopifyResponse<DeleteMediaData>
+        >(DELETE_PRODUCT_MEDIA_MUTATION, {
+          productId: input.productId,
+          mediaIds: existingMediaIds,
+        });
+
+        if (deleteResponse.errors && deleteResponse.errors.length > 0) {
+          throw new ShopifyAPIError(
+            `Error eliminando media: ${deleteResponse.errors[0].message}`
+          );
+        }
+
+        if (deleteResponse.data.productDeleteMedia.userErrors.length > 0) {
+          throw new BadRequestError(
+            `Error eliminando imágenes: ${deleteResponse.data.productDeleteMedia.userErrors[0].message}`
+          );
+        }
+
+        console.log('Imágenes previas eliminadas correctamente');
+      }
+
+      // ─── Paso 3: Cargar nuevas imágenes ───────────────────────────────
+      const createResponse = await this.shopifyClient.request<
+        ShopifyResponse<CreateMediaData>
+      >(CREATE_PRODUCT_MEDIA_MUTATION, {
+        productId: input.productId,
+        media: input.variants.map((v) => ({
+          originalSource: v.image,
+          mediaContentType: 'IMAGE',
+        })),
+      });
+
+      if (createResponse.errors && createResponse.errors.length > 0) {
+        throw new ShopifyAPIError(
+          `Error creando media: ${createResponse.errors[0].message}`
+        );
+      }
+
+      if (createResponse.data.productCreateMedia.userErrors.length > 0) {
+        throw new BadRequestError(
+          `Error cargando imágenes: ${createResponse.data.productCreateMedia.userErrors[0].message}`
+        );
+      }
+
+      const createdMedia = createResponse.data.productCreateMedia.media;
+      const createdMediaIds = createdMedia.map((m) => m.id);
+
+      console.log(`${createdMedia.length} imágenes cargadas, esperando procesamiento...`);
+
+      // ─── Paso 3.5: Esperar a que estén READY ─────────────────────────
+      await this.waitForMediaReady(input.productId, createdMediaIds);
+
+
+      // ─── Paso 4: Asignar cada imagen a su variante ────────────────────
+      const assignResponse = await this.shopifyClient.request<
+        ShopifyResponse<AssignVariantImageData>
+      >(ASSIGN_VARIANT_IMAGE_MUTATION, {
+        productId: input.productId,
+        variantMedia: input.variants.map((variant, index) => ({
+          variantId: variant.id,
+          mediaIds: [createdMedia[index].id],
+        })),
+      });
+
+      if (assignResponse.errors && assignResponse.errors.length > 0) {
+        throw new ShopifyAPIError(
+          `Error asignando media: ${assignResponse.errors[0].message}`
+        );
+      }
+
+      if (assignResponse.data.productVariantAppendMedia.userErrors.length > 0) {
+        throw new BadRequestError(
+          `Error asignando imágenes a variantes: ${assignResponse.data.productVariantAppendMedia.userErrors[0].message}`
+        );
+      }
+
+      console.log('Imágenes asignadas a variantes correctamente', {
+        productId: input.productId,
+      });
+
+    } catch (error) {
+      logger.error('Error actualizando imágenes de variantes', { error });
       throw error;
     }
   }
@@ -893,6 +1263,42 @@ export class ProductService implements IProductService {
         publishedAt: edge.node.publishDate || undefined,
       })),
     };
+  }
+  private async waitForMediaReady(
+    productId: string,
+    mediaIds: string[],
+    maxRetries = 15,
+    delayMs = 2000
+  ): Promise<void> {
+    for (let i = 0; i < maxRetries; i++) {
+      const response = await this.shopifyClient.request<
+        ShopifyResponse<GetProductMediaData>
+      >(GET_PRODUCT_MEDIA_QUERY, { id: productId });
+
+      const mediaNodes = response.data.product.media.edges
+        .map((e) => e.node)
+        .filter((node) => mediaIds.includes(node.id));
+
+      const failed = mediaNodes.filter((n) => n.status === 'FAILED');
+      if (failed.length > 0) {
+        throw new ShopifyAPIError(
+          `Imágenes fallidas al procesar: ${failed.map((f) => f.id).join(', ')}`
+        );
+      }
+
+      const allReady = mediaNodes.every((n) => n.status === 'READY');
+      if (allReady) {
+        console.log(`Media lista tras ${i + 1} intento(s)`);
+        return;
+      }
+
+      console.log(`Esperando media... intento ${i + 1}/${maxRetries}`);
+      await new Promise((res) => setTimeout(res, delayMs));
+    }
+
+    throw new ShopifyAPIError(
+      'Timeout: las imágenes no estuvieron listas a tiempo'
+    );
   }
 }
 

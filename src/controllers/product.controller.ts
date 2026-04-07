@@ -111,4 +111,101 @@ export class ProductController {
       next(error);
     }
   };
+
+  updateVariant = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      logger.info('POST /product/variants - Actualizando variantes');
+
+      await this.productService.updateVariant(req.body);
+
+      res.status(200).json({
+        success: true,
+        message: 'Variantes actualizadas exitosamente',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  deleteVariant = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      logger.info('DELETE /product/variants - Eliminando variantes');
+
+      await this.productService.deleteVariant(req.body);
+
+      res.status(200).json({
+        success: true,
+        message: 'Variantes eliminadas exitosamente',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  editProduct = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { productId, ...updateData } = req.body;
+      logger.info(`POST /product/edit - Editando producto ${productId}`);
+
+      await this.productService.updateProduct(productId, updateData);
+
+      res.status(200).json({
+        success: true,
+        message: 'Producto editado exitosamente',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  deleteProductById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { productId } = req.body;
+      logger.info(`POST /product/delete - Eliminando producto ${productId}`);
+
+      await this.productService.deleteProduct(productId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Producto eliminado exitosamente',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  updateVariantImages = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      logger.info('POST /product/variants/images - Actualizando imágenes de variantes');
+
+      await this.productService.updateVariantImages(req.body);
+
+      res.status(200).json({
+        success: true,
+        message: 'Imágenes de variantes actualizadas exitosamente',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

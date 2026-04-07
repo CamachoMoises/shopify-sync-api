@@ -91,3 +91,51 @@ export type UpdateVariantInput = z.infer<typeof updateVariantSchema>;
 export type BulkPriceUpdateInput = z.infer<typeof bulkPriceUpdateSchema>;
 export type BulkInventoryUpdateInput = z.infer<typeof bulkInventoryUpdateSchema>;
 export type CreateImageInput = z.infer<typeof createImageSchema>;
+
+export const bulkUpdateVariantsSchema = z.object({
+  productId: z.string().min(1, 'Product ID es requerido'),
+  variants: z.array(z.object({
+    id: z.string().min(1, 'Variant ID es requerido'),
+    price: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
+    compareAtPrice: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
+    sku: z.string().optional(),
+  })).min(1, 'Al menos una variante es requerida'),
+});
+
+export type BulkUpdateVariantsInput = z.infer<typeof bulkUpdateVariantsSchema>;
+
+export const bulkDeleteVariantsSchema = z.object({
+  productId: z.string().min(1, 'Product ID es requerido'),
+  variants: z.array(z.object({
+    id: z.string().min(1, 'Variant ID es requerido'),
+  })).min(1, 'Al menos una variante es requerida'),
+});
+
+export type BulkDeleteVariantsInput = z.infer<typeof bulkDeleteVariantsSchema>;
+
+export const editProductSchema = z.object({
+  productId: z.string().min(1, 'Product ID es requerido'),
+  title: z.string().min(1).optional(),
+  description: z.string().optional(),
+  vendor: z.string().optional(),
+  productType: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+});
+
+export type EditProductInput = z.infer<typeof editProductSchema>;
+
+export const deleteProductSchema = z.object({
+  productId: z.string().min(1, 'Product ID es requerido'),
+});
+
+export type DeleteProductInput = z.infer<typeof deleteProductSchema>;
+
+export const updateVariantImagesSchema = z.object({
+  productId: z.string().min(1, 'Product ID es requerido'),
+  variants: z.array(z.object({
+    id: z.string().min(1, 'Variant ID es requerido'),
+    image: z.string().url('URL de imagen inválida'),
+  })).min(1, 'Al menos una variante es requerida'),
+});
+
+export type UpdateVariantImagesInput = z.infer<typeof updateVariantImagesSchema>;

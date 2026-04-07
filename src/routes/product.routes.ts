@@ -1,9 +1,14 @@
 import { Router } from 'express';
 import { ProductController } from '../controllers';
 import { validateRequest } from '../middleware/validation.middleware';
-import { 
-  createProductSchema, 
-  updateProductSchema 
+import {
+  createProductSchema,
+  updateProductSchema,
+  bulkUpdateVariantsSchema,
+  bulkDeleteVariantsSchema,
+  editProductSchema,
+  deleteProductSchema,
+  updateVariantImagesSchema
 } from '../validators/product.validator';
 import { apiRateLimiter, writeRateLimiter } from '../middleware/rate-limit.middleware';
 
@@ -48,6 +53,46 @@ export const createProductRoutes = (
     '/delete/:product_id',
     writeRateLimiter,
     productController.deleteProduct
+  );
+
+  // POST /product/variants - Actualizar variantes
+  router.post(
+    '/variants',
+    writeRateLimiter,
+    validateRequest(bulkUpdateVariantsSchema),
+    productController.updateVariant
+  );
+
+  // DELETE /product/variants - Eliminar variantes
+  router.delete(
+    '/variants',
+    writeRateLimiter,
+    validateRequest(bulkDeleteVariantsSchema),
+    productController.deleteVariant
+  );
+
+  // POST /product/edit - Editar producto
+  router.post(
+    '/edit',
+    writeRateLimiter,
+    validateRequest(editProductSchema),
+    productController.editProduct
+  );
+
+  // POST /product/delete - Eliminar producto
+  router.post(
+    '/delete',
+    writeRateLimiter,
+    validateRequest(deleteProductSchema),
+    productController.deleteProductById
+  );
+
+  // POST /product/variants/images - Actualizar imágenes de variantes
+  router.post(
+    '/variants/images',
+    writeRateLimiter,
+    validateRequest(updateVariantImagesSchema),
+    productController.updateVariantImages
   );
 
   return router;

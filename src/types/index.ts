@@ -122,6 +122,32 @@ export interface UpdateVariantInput {
   locationId?: string;
 }
 
+export interface VariantBulkUpdateInput {
+  id: string;
+  price?: string;
+  compareAtPrice?: string;
+  sku?: string;
+}
+
+export interface VariantDeleteInput {
+  id: string;
+}
+
+export interface DeleteVariantPayload {
+  productId: string;
+  variants: VariantDeleteInput[];
+}
+
+export interface VariantImageInput {
+  id: string;
+  image: string;
+}
+
+export interface UpdateVariantImagesInput {
+  productId: string;
+  variants: VariantImageInput[];
+}
+
 export interface BulkPriceUpdateInput {
   shopifyId: string;
   shopifyVariantId: string;
@@ -248,12 +274,20 @@ export interface ProductPage {
   pageInfo: PageInfo;
 }
 
+export interface UpdateVariantPayload {
+  productId: string;
+  variants: VariantBulkUpdateInput[];
+}
+
 export interface IProductService {
   getAllProducts(): Promise<Product[]>;
   getProductsPage(first: number, after?: string): Promise<ProductPage>;
   getProductById(productId: string): Promise<Product | null>;
   createProduct(input: CreateProductInput): Promise<string>;
   updateProduct(productId: string, input: UpdateProductInput): Promise<void>;
+  updateVariant(payload: UpdateVariantPayload): Promise<void>;
+  updateVariantImages(input: UpdateVariantImagesInput): Promise<void>;
+  deleteVariant(payload: DeleteVariantPayload): Promise<void>;
   deleteProduct(productId: string): Promise<void>;
 }
 
