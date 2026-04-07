@@ -6,7 +6,8 @@ import {
   CreateProductInput,
   UpdateProductInput,
   ShopifyResponse,
-  AddVariantsPayload
+  AddVariantsPayload,
+  SimpleProduct
 } from '../types';
 import { logger } from '../config/logger.config';
 import { ShopifyAPIError, NotFoundError } from '../middleware/error.middleware';
@@ -109,6 +110,96 @@ const GET_PRODUCT_WITH_OPTIONS_AND_VARIANTS_QUERY = `
           selectedOptions {
             name
             value
+          }
+        }
+      }
+    }
+  }
+`;
+
+const GET_PRODUCTS_SIMPLE_QUERY = `
+  query GetProductsSimple($first: Int!, $after: String) {
+    products(first: $first, after: $after) {
+      edges {
+        cursor
+        node {
+          id
+          variants(first: 100) {
+            edges {
+              node {
+                id
+                sku
+              }
+            }
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+`;
+
+const GET_PRODUCT_BY_ID_QUERY = `
+  query GetProductById($id: ID!) {
+    product(id: $id) {
+      id
+      title
+      description
+      vendor
+      productType
+      tags
+      status
+      publishedAt
+      createdAt
+      updatedAt
+      variants(first: 100) {
+        edges {
+          node {
+            id
+            title
+            sku
+            price
+            compareAtPrice
+            inventoryQuantity
+            inventoryItem {
+              id
+              inventoryLevels(first: 1) {
+                edges {
+                  node {
+                    location {
+                      id
+                    }
+                  }
+                }
+              }
+            }
+            selectedOptions {
+              name
+              value
+            }
+          }
+        }
+      }
+      images(first: 100) {
+        edges {
+          node {
+            id
+            url
+            altText
+          }
+        }
+      }
+      resourcePublications(first: 100) {
+        edges {
+          node {
+            publication {
+              id
+              name
+            }
+            publishDate
           }
         }
       }
@@ -303,6 +394,30 @@ interface ProductsData {
   products: {
     edges: Array<{
       node: ShopifyProductNode;
+    }>;
+    pageInfo: {
+      hasNextPage: boolean;
+      endCursor: string | null;
+    };
+  };
+}
+
+interface SimpleProductNode {
+  id: string;
+  variants: {
+    edges: Array<{
+      node: {
+        id: string;
+        sku: string | null;
+      };
+    }>;
+  };
+}
+
+interface ProductsSimpleData {
+  products: {
+    edges: Array<{
+      node: SimpleProductNode;
     }>;
     pageInfo: {
       hasNextPage: boolean;
@@ -595,6 +710,48 @@ export class ProductService implements IProductService {
     }
   }
 
+  async getAllProductsSimple(): Promise<SimpleProduct[]> {
+    try {
+      console.log('Obteniendo productos simples de Shopify');
+      const allProducts: SimpleProduct[] = [];
+      let after: string | null = null;
+      const chunkSize = 50;
+
+      do {
+        const response: ShopifyResponse<ProductsSimpleData> = await this.shopifyClient.request<
+          ShopifyResponse<ProductsSimpleData>
+        >(GET_PRODUCTS_SIMPLE_QUERY, { first: chunkSize, after });
+
+        if (response.errors && response.errors.length > 0) {
+          throw new ShopifyAPIError(`Error de Shopify: ${response.errors[0].message}`);
+        }
+
+        const products: SimpleProduct[] = response.data.products.edges.map(
+          (edge: { node: SimpleProductNode }) => ({
+            productId: edge.node.id,
+            variants: edge.node.variants.edges.map(
+              (v: { node: { id: string; sku: string | null } }) => ({
+                variantId: v.node.id,
+                sku: v.node.sku || undefined,
+              })
+            ),
+          })
+        );
+
+        allProducts.push(...products);
+        after = response.data.products.pageInfo.hasNextPage
+          ? response.data.products.pageInfo.endCursor
+          : null;
+      } while (after);
+
+      console.log(`Obtenidos ${allProducts.length} productos simples`);
+      return allProducts;
+    } catch (error) {
+      console.error('Error obteniendo productos simples', { error });
+      throw error;
+    }
+  }
+
   async getProductsPage(first: number, after?: string): Promise<ProductPage> {
     try {
       console.log('Obteniendo página de productos de Shopify', { first, after });
@@ -639,10 +796,10 @@ export class ProductService implements IProductService {
       const formattedId = productId.startsWith('gid://')
         ? productId
         : `gid://shopify/Product/${productId}`;
-
+      console.log('Formatted product ID', { formattedId });
       const response = await this.shopifyClient.request<
         ShopifyResponse<ProductData>
-      >(GET_PRODUCTS_QUERY, { id: formattedId });
+      >(GET_PRODUCT_BY_ID_QUERY, { id: formattedId });
 
       if (response.errors && response.errors.length > 0) {
         throw new ShopifyAPIError(

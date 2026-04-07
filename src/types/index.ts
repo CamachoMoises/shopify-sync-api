@@ -168,6 +168,16 @@ export interface UpdateVariantImagesInput {
   variants: VariantImageInput[];
 }
 
+export interface SimpleVariant {
+  variantId: string;
+  sku?: string;
+}
+
+export interface SimpleProduct {
+  productId: string;
+  variants: SimpleVariant[];
+}
+
 export interface BulkPriceUpdateInput {
   shopifyId: string;
   shopifyVariantId: string;
@@ -302,6 +312,7 @@ export interface UpdateVariantPayload {
 export interface IProductService {
   getAllProducts(): Promise<Product[]>;
   getProductsPage(first: number, after?: string): Promise<ProductPage>;
+  getAllProductsSimple(): Promise<SimpleProduct[]>;
   getProductById(productId: string): Promise<Product | null>;
   createProduct(input: CreateProductInput): Promise<string>;
   updateProduct(productId: string, input: UpdateProductInput): Promise<void>;

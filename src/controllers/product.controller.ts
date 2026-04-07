@@ -30,6 +30,26 @@ export class ProductController {
     }
   };
 
+  getAllProductsSimple = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      console.log('GET /products/simple - Obteniendo lista simple de productos');
+
+      const products = await this.productService.getAllProductsSimple();
+
+      res.status(200).json({
+        success: true,
+        data: products,
+        count: products.length,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   getProductById = async (
     req: Request,
     res: Response,

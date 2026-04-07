@@ -373,6 +373,74 @@ Los siguientes scripts están disponibles para facilitar el desarrollo y la gest
 -   `npm run lint:fix`: Ejecuta ESLint y corrige automáticamente los problemas que pueden ser resueltos.
 -   `npm run type-check`: Realiza una verificación de tipos con TypeScript sin compilar el código.
 
+
+# API Routes
+
+## Products (`/product`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /products | List all products |
+| GET | /product/:product_id | Get product details |
+| POST | /product/create | Create product |
+| PUT | /product/update/:product_id | Update product |
+| PUT | /product/delete/:product_id | Deactivate product |
+| POST | /product/edit | Edit product |
+| POST | /product/delete | Delete product |
+| POST | /product/variants | Update variants |
+| POST | /product/variants/add | Add variants |
+| DELETE | /product/variants | Delete variants |
+| POST | /product/variants/images | Update variant images |
+
+## Variants (`/product/variant`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /product/variants/:product_id | List product variants |
+| POST | /product/variant/create | Create variant |
+| POST | /product/variant/create/:producto_id | Create variant for product |
+| PUT | /product/variant/update/:shopify_variant_id | Update variant |
+| PUT | /product/variant/delete/:shopify_variant_id | Deactivate variant |
+
+## Images (`/product/images`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /product/images/:product_id | List product images |
+| POST | /product/images/add/:product_id/:shopify_variant_id | Add image to variant |
+
+## Inventory (`/inventory`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /inventory/products | List products with inventory |
+| GET | /inventory/products/:product_id | Get product inventory |
+| PUT | /inventory/products/variants | Update product inventory |
+| PUT | /inventory/products/prices | Update product prices |
+| GET | /inventory/variants/:product_id | List variants inventory |
+| GET | /inventory/variant/:variant_id | Get variant inventory |
+| PUT | /inventory/variant/:variant_id | Update variant inventory |
+| POST | /inventory/variants/bulk-update | Bulk update inventory |
+
+## Orders (`/order`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /orders | Sync orders from Shopify |
+| GET | /order/products/:order_id | Get order products |
+
+## Locations (`/locations`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /locations | List locations |
+
+## Publications (`/publications`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /publications | List publications |
+
 ## Licencia
 
 Este proyecto está bajo la Licencia MIT. Consulta el archivo `LICENSE` para más detalles.

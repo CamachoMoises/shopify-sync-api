@@ -26,6 +26,13 @@ export const createProductRoutes = (
     productController.getAllProducts
   );
 
+  // GET /products/simple - Lista simple de productos
+  router.get(
+    '/simple',
+    apiRateLimiter,
+    productController.getAllProductsSimple
+  );
+
   // GET /product/:product_id - Detalles de producto
   router.get(
     '/:product_id',
