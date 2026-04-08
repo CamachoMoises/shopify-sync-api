@@ -123,9 +123,9 @@ export const createApp = (): Application => {
     createOrderRoutes(container.orderController)
   );
 
-  // Order products
+  // Order (singular)
   app.use(
-    '/order/products',
+    '/order',
     createOrderRoutes(container.orderController)
   );
 

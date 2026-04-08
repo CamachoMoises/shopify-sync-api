@@ -168,9 +168,14 @@ export interface UpdateVariantImagesInput {
   variants: VariantImageInput[];
 }
 
+export interface SimpleVariantLocation {
+  id: string;
+}
+
 export interface SimpleVariant {
   variantId: string;
   sku?: string;
+  locations: SimpleVariantLocation[];
 }
 
 export interface SimpleProduct {
@@ -365,8 +370,14 @@ export interface IInventoryService {
   bulkUpdateVariantsInventory(updates: InventoryVariantUpdate[]): Promise<void>;
 }
 
+export interface OrderPage {
+  orders: Order[];
+  pageInfo: PageInfo;
+}
+
 export interface IOrderService {
   getAllOrders(): Promise<Order[]>;
+  getOrdersPage(first: number, after?: string): Promise<OrderPage>;
   getOrderProducts(orderId: string): Promise<LineItem[]>;
 }
 

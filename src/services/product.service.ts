@@ -129,6 +129,18 @@ const GET_PRODUCTS_SIMPLE_QUERY = `
               node {
                 id
                 sku
+                inventoryItem {
+                  id
+                  inventoryLevels(first: 10) {
+                    edges {
+                      node {
+                        location {
+                          id
+                        }
+                      }
+                    }
+                  }
+                }
               }
             }
           }
@@ -409,6 +421,18 @@ interface SimpleProductNode {
       node: {
         id: string;
         sku: string | null;
+        inventoryItem: {
+          id: string;
+          inventoryLevels: {
+            edges: Array<{
+              node: {
+                location: {
+                  id: string;
+                };
+              };
+            }>;
+          };
+        } | null;
       };
     }>;
   };
@@ -730,9 +754,14 @@ export class ProductService implements IProductService {
           (edge: { node: SimpleProductNode }) => ({
             productId: edge.node.id,
             variants: edge.node.variants.edges.map(
-              (v: { node: { id: string; sku: string | null } }) => ({
+              (v: { node: SimpleProductNode['variants']['edges'][0]['node'] }) => ({
                 variantId: v.node.id,
                 sku: v.node.sku || undefined,
+                locations: v.node.inventoryItem?.inventoryLevels.edges.map(
+                  (l: { node: { location: { id: string } } }) => ({
+                    id: l.node.location.id,
+                  })
+                ) || [],
               })
             ),
           })

@@ -48,6 +48,22 @@ export const createProductRoutes = (
     productController.createProduct
   );
 
+  // PUT /product - Editar producto
+  router.put(
+    '/',
+    writeRateLimiter,
+    validateRequest(editProductSchema),
+    productController.editProduct
+  );
+
+  // DELETE /product - Eliminar producto
+  router.delete(
+    '/',
+    writeRateLimiter,
+    validateRequest(deleteProductSchema),
+    productController.deleteProductById
+  );
+
   // PUT /product/update/:product_id - Actualizar producto
   router.put(
     '/update/:product_id',
@@ -63,8 +79,16 @@ export const createProductRoutes = (
     productController.deleteProduct
   );
 
-  // POST /product/variants - Actualizar variantes
+  // POST /product/variants - Agregar variantes
   router.post(
+    '/variants',
+    writeRateLimiter,
+    validateRequest(addVariantsSchema),
+    productController.addVariants
+  );
+
+  // PUT /product/variants - Actualizar variantes
+  router.put(
     '/variants',
     writeRateLimiter,
     validateRequest(bulkUpdateVariantsSchema),
@@ -79,36 +103,12 @@ export const createProductRoutes = (
     productController.deleteVariant
   );
 
-  // POST /product/edit - Editar producto
-  router.post(
-    '/edit',
-    writeRateLimiter,
-    validateRequest(editProductSchema),
-    productController.editProduct
-  );
-
-  // POST /product/delete - Eliminar producto
-  router.post(
-    '/delete',
-    writeRateLimiter,
-    validateRequest(deleteProductSchema),
-    productController.deleteProductById
-  );
-
   // POST /product/variants/images - Actualizar imágenes de variantes
   router.post(
     '/variants/images',
     writeRateLimiter,
     validateRequest(updateVariantImagesSchema),
     productController.updateVariantImages
-  );
-
-  // POST /product/variants/add - Agregar variantes
-  router.post(
-    '/variants/add',
-    writeRateLimiter,
-    validateRequest(addVariantsSchema),
-    productController.addVariants
   );
 
   return router;

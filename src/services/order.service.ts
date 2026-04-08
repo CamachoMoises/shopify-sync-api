@@ -2,6 +2,7 @@ import {
   IOrderService,
   IShopifyClient,
   Order,
+  OrderPage,
   LineItem,
   ShopifyResponse
 } from '../types';
@@ -10,9 +11,10 @@ import { ShopifyAPIError, NotFoundError } from '../middleware/error.middleware';
 
 // Queries GraphQL
 const GET_ORDERS_QUERY = `
-  query GetOrders($first: Int!) {
-    orders(first: $first, sortKey: CREATED_AT, reverse: true) {
+  query GetOrders($first: Int!, $after: String) {
+    orders(first: $first, sortKey: CREATED_AT, reverse: true, after: $after) {
       edges {
+        cursor
         node {
           id
           name
@@ -64,6 +66,10 @@ const GET_ORDERS_QUERY = `
           }
         }
       }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
     }
   }
 `;
@@ -103,8 +109,13 @@ const GET_ORDER_PRODUCTS_QUERY = `
 interface OrdersData {
   orders: {
     edges: Array<{
+      cursor: string;
       node: ShopifyOrderNode;
     }>;
+    pageInfo: {
+      hasNextPage: boolean;
+      endCursor: string | null;
+    };
   };
 }
 
@@ -201,13 +212,57 @@ export class OrderService implements IOrderService {
     }
   }
 
+  async getOrdersPage(first: number, after?: string): Promise<OrderPage> {
+    try {
+      console.log('Obteniendo página de órdenes de Shopify', { first, after });
+
+      const variables: { first: number; after?: string } = { first };
+      if (after) variables.after = after;
+
+      const response = await this.shopifyClient.request<
+        ShopifyResponse<OrdersData>
+      >(GET_ORDERS_QUERY, variables);
+
+      if (response.errors && response.errors.length > 0) {
+        throw new ShopifyAPIError(
+          `Error de Shopify: ${response.errors[0].message}`
+        );
+      }
+
+      const orders = response.data.orders.edges.map((edge) =>
+        this.mapShopifyOrderToOrder(edge.node)
+      );
+      const { hasNextPage, endCursor } = response.data.orders.pageInfo;
+
+      console.log('Page result', {
+        orderCount: orders.length,
+        hasNextPage,
+        endCursor,
+      });
+
+      return {
+        orders,
+        pageInfo: {
+          hasNextPage,
+          endCursor: endCursor ?? null,
+        },
+      };
+    } catch (error) {
+      console.error('Error obteniendo página de órdenes', { error });
+      throw error;
+    }
+  }
+
   async getOrderProducts(orderId: string): Promise<LineItem[]> {
     try {
-      console.log('Obteniendo productos de la orden', { orderId });
+      const formattedId = orderId.startsWith('gid://')
+        ? orderId
+        : `gid://shopify/Order/${orderId}`;
+      console.log('Obteniendo productos de la orden', { orderId, formattedId });
 
       const response = await this.shopifyClient.request<
         ShopifyResponse<OrderProductsData>
-      >(GET_ORDER_PRODUCTS_QUERY, { orderId });
+      >(GET_ORDER_PRODUCTS_QUERY, { orderId: formattedId });
 
       if (response.errors && response.errors.length > 0) {
         throw new ShopifyAPIError(
@@ -216,7 +271,7 @@ export class OrderService implements IOrderService {
       }
 
       if (!response.data.order) {
-        throw new NotFoundError(`Orden ${orderId} no encontrada`);
+        throw new NotFoundError(`Orden ${formattedId} no encontrada`);
       }
 
       const lineItems = response.data.order.lineItems.edges.map((edge) =>

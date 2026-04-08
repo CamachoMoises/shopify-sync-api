@@ -7,20 +7,23 @@ export class OrderController {
   constructor(private readonly orderService: IOrderService) { }
 
   getAllOrders = async (
-    _req: Request,
+    req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> => {
     try {
-      console.log('GET /orders - Sincronizando órdenes desde Shopify');
+      const first = Number(req.query.first) || 50;
+      const after = typeof req.query.after === 'string' ? req.query.after : undefined;
 
-      const orders = await this.orderService.getAllOrders();
+      console.log('GET /orders - Obteniendo lista de órdenes', { first, after });
+
+      const page = await this.orderService.getOrdersPage(first, after);
 
       res.status(200).json({
         success: true,
-        message: 'Órdenes sincronizadas exitosamente',
-        data: orders,
-        count: orders.length,
+        data: page.orders,
+        count: page.orders.length,
+        pageInfo: page.pageInfo,
       });
     } catch (error) {
       next(error);
