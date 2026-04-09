@@ -92,7 +92,7 @@ export const inventoryProductUpdateSchema = z.object({
 export const priceVariantUpdateSchema = z.object({
   shopifyVariantId: z.string().min(1, 'Shopify Variant ID es requerido'),
   price: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Precio debe ser un número válido'),
-  compareAtPrice: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
+  compareAtPrice: z.string().regex(/^\d+(\.\d{1,2})?$/).nullable(),
 });
 
 export const priceProductUpdateSchema = z.object({
