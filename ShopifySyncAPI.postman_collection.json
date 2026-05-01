@@ -1,0 +1,472 @@
+{
+  "info": {
+    "name": "Shopify Sync API",
+    "description": "Postman collection for Shopify Sync API endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Get Health Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Locations",
+      "item": [
+        {
+          "name": "Get All Locations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/locations",
+              "host": ["{{base_url}}"],
+              "path": ["locations"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Publications",
+      "item": [
+        {
+          "name": "Get Publications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/publications",
+              "host": ["{{base_url}}"],
+              "path": ["publications"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "List Products (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/products?first=20&after={{cursor}}",
+              "host": ["{{base_url}}"],
+              "path": ["products"],
+              "query": [
+                {
+                  "key": "first",
+                  "value": "20"
+                },
+                {
+                  "key": "after",
+                  "value": "{{cursor}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Product Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/product/{{product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["product", "{{product_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Simple Products List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/products/simple",
+              "host": ["{{base_url}}"],
+              "path": ["products", "simple"]
+            }
+          }
+        },
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Arbol 14\",\n  \"description\": \"<p>Descripción en HTML...</p>\",\n  \"vendor\": \"JOY Arte y Decoración\",\n  \"productType\": \"Decoration\",\n  \"tags\": [\"christmas\", \"madrid\"],\n  \"options\": [\n    {\n      \"name\": \"Size\",\n      \"values\": [{\"name\": \"150cm\"}, {\"name\": \"180cm\"}]\n    }\n  ],\n  \"variants\": [\n    {\n      \"price\": \"89.99\",\n      \"sku\": \"TREE-150\",\n      \"inventoryQuantity\": 10,\n      \"locationId\": \"gid://shopify/Location/81549426943\",\n      \"optionValues\": [{\"optionName\": \"Size\", \"name\": \"150cm\"}]\n    }\n  ],\n  \"publishToPublications\": true,\n  \"publicationIds\": [\"gid://shopify/Publication/154542309631\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/products/create",
+              "host": ["{{base_url}}"],
+              "path": ["products", "create"]
+            }
+          }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"gid://shopify/Product/9448497447167\",\n  \"title\": \"Arbol 100\",\n  \"description\": \"<p>Product description........</p>\",\n  \"vendor\": \"JOY Arte y Decoración\",\n  \"productType\": \"Decoration\",\n  \"tags\": [\"christmas\", \"Test\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/product",
+              "host": ["{{base_url}}"],
+              "path": ["product"]
+            }
+          }
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"9449019375871\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/product",
+              "host": ["{{base_url}}"],
+              "path": ["product"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Variants",
+      "item": [
+        {
+          "name": "Add Variants",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"gid://shopify/Product/9448497447167\",\n  \"variants\": [\n    {\n      \"price\": \"59.99\",\n      \"sku\": \"TREE-50\",\n      \"compareAtPrice\": \"69.99\",\n      \"inventoryQuantity\": 10,\n      \"locationId\": \"gid://shopify/Location/81549426943\",\n      \"optionValues\": [\n        {\"optionName\": \"Size\", \"name\": \"50cm\"}\n      ]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/product/variants",
+              "host": ["{{base_url}}"],
+              "path": ["product", "variants"]
+            }
+          }
+        },
+        {
+          "name": "Update Variants",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"gid://shopify/Product/9448497447167\",\n  \"variants\": [\n    {\n      \"id\": \"gid://shopify/ProductVariant/48378904183039\",\n      \"price\": \"95.00\",\n      \"compareAtPrice\": \"109.99\",\n      \"sku\": \"TREE-150-V2\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/product/variants",
+              "host": ["{{base_url}}"],
+              "path": ["product", "variants"]
+            }
+          }
+        },
+        {
+          "name": "Delete Variants",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"gid://shopify/Product/9448452260095\",\n  \"variants\": [\n    {\n      \"id\": \"gid://shopify/ProductVariant/48377647792383\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/product/variants",
+              "host": ["{{base_url}}"],
+              "path": ["product", "variants"]
+            }
+          }
+        },
+        {
+          "name": "Associate Images to Variants",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"gid://shopify/Product/9448497447167\",\n  \"variants\": [\n    {\n      \"id\": \"gid://shopify/ProductVariant/48378060931327\",\n      \"image\": \"https://servidor.com/foto1.jpg\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/product/variants/images",
+              "host": ["{{base_url}}"],
+              "path": ["product", "variants", "images"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "List Orders (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders?first=20&after={{cursor}}",
+              "host": ["{{base_url}}"],
+              "path": ["orders"],
+              "query": [
+                {
+                  "key": "first",
+                  "value": "20"
+                },
+                {
+                  "key": "after",
+                  "value": "{{cursor}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Products in Order",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/order/products/{{order_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["order", "products", "{{order_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory",
+      "item": [
+        {
+          "name": "Update Prices",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"gid://shopify/Product/9448497447167\",\n  \"variants\": [\n    {\n      \"shopifyVariantId\": \"gid://shopify/ProductVariant/48378904183039\",\n      \"price\": \"95.00\",\n      \"compareAtPrice\": \"109.99\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/inventory/products/prices",
+              "host": ["{{base_url}}"],
+              "path": ["inventory", "products", "prices"]
+            }
+          }
+        },
+        {
+          "name": "Update Inventory Quantities",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"gid://shopify/Product/9448497447167\",\n  \"variants\": [\n    {\n      \"shopifyVariantId\": \"gid://shopify/ProductVariant/48378904183039\",\n      \"inventoryQuantity\": 27,\n      \"locationId\": \"gid://shopify/Location/81549426943\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/inventory/products/variants",
+              "host": ["{{base_url}}"],
+              "path": ["inventory", "products", "variants"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "bearer_token",
+      "value": "your_bearer_token_here",
+      "type": "string"
+    },
+    {
+      "key": "product_id",
+      "value": "gid://shopify/Product/9448497447167",
+      "type": "string"
+    },
+    {
+      "key": "order_id",
+      "value": "gid://shopify/Order/6479207235839",
+      "type": "string"
+    },
+    {
+      "key": "cursor",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

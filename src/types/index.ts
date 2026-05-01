@@ -363,6 +363,11 @@ export interface IInventoryService {
   bulkUpdateVariantsInventory(updates: InventoryVariantUpdate[]): Promise<void>;
 }
 
+export interface SimpleOrder {
+  orderId: string;
+  orderName: string;
+}
+
 export interface OrderPage {
   orders: Order[];
   pageInfo: PageInfo;
@@ -372,6 +377,8 @@ export interface IOrderService {
   getAllOrders(): Promise<Order[]>;
   getOrdersPage(first: number, after?: string): Promise<OrderPage>;
   getOrderProducts(orderId: string): Promise<LineItem[]>;
+  getAllOrdersSimple(): Promise<SimpleOrder[]>;
+  getOrderById(orderId: string): Promise<Order | null>;
 }
 
 export interface IImageService {

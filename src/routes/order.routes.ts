@@ -13,12 +13,22 @@ export const createOrderRoutes = (orderController: OrderController): Router => {
     orderController.getAllOrders
   );
 
-  // GET /order/products/:order_id - Detalles de productos en orden
+// GET /order/products/:order_id - Detalles de productos en orden
   router.get(
     '/products/:order_id',
     apiRateLimiter,
     orderController.getOrderProducts
   );
+
+  // GET /orders/simple - Lista simple de órdenes
+  router.get(
+    '/simple',
+    apiRateLimiter,
+    orderController.getAllOrdersSimple
+  );
+
+  // GET /order?order_id=... - Detalles de orden por ID (soporta GID completo)
+  router.get('/', orderController.getOrderById);
 
   return router;
 };

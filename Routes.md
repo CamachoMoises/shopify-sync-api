@@ -402,9 +402,121 @@ Obtiene el desglose detallado de los artículos (`LineItems`) incluidos en un pe
     "count": 1
 }
 ```
+
 ---
 
-## 8. Crear Producto (Create Product)
+## 8. Detalle de Orden (Order Detail)
+
+### Obtener una orden por ID
+Recupera la información completa de una orden específica utilizando su identificador único. Incluye estado financiero, de cumplimiento, totales y el desglose completo de artículos comprados.
+
+* **URL:** `/order?order_id={order_id}`
+* **Método:** `GET`
+* **Autenticación:** Requerida (Bearer Token)
+* **Parámetros de Consulta:**
+  * `order_id` (String): El GID completo o ID numérico de la orden (ej: `gid://shopify/Order/6837945860351`).
+
+#### Respuesta Exitosa (200 OK)
+
+| Campo | Tipo | Descripción |
+| :--- | :--- | :--- |
+| `success` | Boolean | Confirmación de la consulta. |
+| `data` | Object | Objeto con los detalles completos de la orden. |
+
+**Ejemplo de cuerpo de respuesta:**
+
+```json
+{
+    "success": true,
+    "data": {
+        "id": "gid://shopify/Order/6837945860351",
+        "name": "#2048",
+        "createdAt": "2026-01-15T10:30:00Z",
+        "updatedAt": "2026-01-15T14:22:00Z",
+        "financialStatus": "PAID",
+        "fulfillmentStatus": "FULFILLED",
+        "totalPrice": "245.50",
+        "subtotalPrice": "220.00",
+        "totalTax": "25.50",
+        "currencyCode": "USD",
+        "lineItems": [
+            {
+                "id": "gid://shopify/LineItem/15858505154815",
+                "title": "Tambor Set - 4",
+                "variantTitle": "28cm",
+                "quantity": 2,
+                "price": "245.50",
+                "variant": {
+                    "id": "gid://shopify/ProductVariant/47477519253759",
+                    "productId": "gid://shopify/Product/9255813480703",
+                    "title": "28cm",
+                    "sku": "010402010449",
+                    "price": "122.75"
+                },
+                "product": {
+                    "id": "gid://shopify/Product/9255813480703",
+                    "title": "Tambor Set - 4",
+                    "status": "ACTIVE"
+                }
+            }
+        ]
+    }
+}
+```
+
+#### Respuesta Si No Existe (404 Not Found)
+
+```json
+{
+    "success": false,
+    "message": "Orden no encontrada"
+}
+```
+
+---
+
+## 9. Órdenes Simplificadas (Simple Orders)
+### Obtener listado ligero de órdenes (Rápido)
+Retorna todas las órdenes con la información mínima (ID y nombre) para indexación rápida. Este endpoint no está paginado y está optimizado para velocidad.
+
+* **URL:** `/orders/simple`
+* **Método:** `GET`
+* **Autenticación:** Requerida (Bearer Token)
+* **Parámetros de consulta:** Ninguno
+
+#### Respuesta Exitosa (200 OK)
+
+| Campo | Tipo | Descripción |
+| :--- | :--- | :--- |
+| `success` | Boolean | Confirmación de la consulta. |
+| `data` | Array | Lista simplificada de órdenes. |
+| `count` | Integer | Total de órdenes devueltas. |
+
+**Estructura de `data`:**
+* `orderId`: ID único de la orden.
+* `orderName`: Nombre visible de la orden (ej. `#1127`).
+
+**Ejemplo de cuerpo de respuesta:**
+
+```json
+{
+    "success": true,
+    "data": [
+        {
+            "orderId": "gid://shopify/Order/6479207235839",
+            "orderName": "#1127"
+        },
+        {
+            "orderId": "gid://shopify/Order/6479207235840",
+            "orderName": "#1128"
+        }
+    ],
+    "count": 1542
+}
+```
+---
+
+## 9. Crear Producto (Create Product)
 
 ### Crear un nuevo producto con variantes
 Envía la información necesaria para dar de alta un producto en el sistema. Este endpoint gestiona la creación del producto padre, sus opciones (tallas, colores), las variantes físicas con su stock inicial y la visibilidad en los canales de venta.

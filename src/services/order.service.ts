@@ -4,9 +4,9 @@ import {
   Order,
   OrderPage,
   LineItem,
-  ShopifyResponse
+  ShopifyResponse,
+  SimpleOrder
 } from '../types';
-import { logger } from '../config/logger.config';
 import { ShopifyAPIError, NotFoundError } from '../middleware/error.middleware';
 
 // Queries GraphQL
@@ -105,6 +105,99 @@ const GET_ORDER_PRODUCTS_QUERY = `
     }
   }
 `;
+
+const GET_ORDERS_SIMPLE_QUERY = `
+  query GetOrdersSimple($first: Int!, $after: String) {
+    orders(first: $first, sortKey: CREATED_AT, reverse: true, after: $after) {
+      edges {
+        cursor
+        node {
+          id
+          name
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+`;
+
+interface OrdersSimpleData {
+  orders: {
+    edges: Array<{
+      cursor: string;
+      node: {
+        id: string;
+        name: string;
+      };
+    }>;
+    pageInfo: {
+      hasNextPage: boolean;
+      endCursor: string | null;
+    };
+  };
+}
+
+const GET_ORDER_BY_ID_QUERY = `
+  query GetOrderById($id: ID!) {
+    order(id: $id) {
+      id
+      name
+      createdAt
+      updatedAt
+      displayFinancialStatus
+      displayFulfillmentStatus
+      totalPriceSet {
+        shopMoney {
+          amount
+          currencyCode
+        }
+      }
+      subtotalPriceSet {
+        shopMoney {
+          amount
+        }
+      }
+      totalTaxSet {
+        shopMoney {
+          amount
+        }
+      }
+      currencyCode
+      lineItems(first: 100) {
+        edges {
+          node {
+            id
+            title
+            variantTitle
+            quantity
+            originalTotalSet {
+              shopMoney {
+                amount
+              }
+            }
+            variant {
+              id
+              title
+              sku
+              price
+            }
+            product {
+              id
+              title
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+interface OrderByIdData {
+  order: ShopifyOrderNode | null;
+}
 
 interface OrdersData {
   orders: {
@@ -287,6 +380,70 @@ export class OrderService implements IOrderService {
         orderId,
         error
       });
+      throw error;
+    }
+  }
+
+  async getAllOrdersSimple(): Promise<SimpleOrder[]> {
+    try {
+      console.log('Obteniendo órdenes simples de Shopify');
+      const allOrders: SimpleOrder[] = [];
+      let hasNextPage = true;
+      let after: string | undefined;
+
+      while (hasNextPage) {
+        const response: ShopifyResponse<OrdersSimpleData> = await this.shopifyClient.request<
+          ShopifyResponse<OrdersSimpleData>
+        >(GET_ORDERS_SIMPLE_QUERY, { first: 250, after });
+
+        if (response.errors && response.errors.length > 0) {
+          throw new ShopifyAPIError(
+            `Error de Shopify: ${response.errors[0].message}`
+          );
+        }
+
+        const orders = response.data.orders.edges.map((edge) => ({
+          orderId: edge.node.id,
+          orderName: edge.node.name,
+        }));
+
+        allOrders.push(...orders);
+        hasNextPage = response.data.orders.pageInfo.hasNextPage;
+        after = response.data.orders.pageInfo.endCursor ?? undefined;
+      }
+
+      console.log(`Obtenidas ${allOrders.length} órdenes simples`);
+      return allOrders;
+    } catch (error) {
+      console.error('Error obteniendo órdenes simples', { error });
+      throw error;
+    }
+  }
+
+  async getOrderById(orderId: string): Promise<Order | null> {
+    try {
+      const formattedId = orderId.startsWith('gid://')
+        ? orderId
+        : `gid://shopify/Order/${orderId}`;
+      console.log('Obteniendo orden por ID', { orderId, formattedId });
+
+      const response = await this.shopifyClient.request<
+        ShopifyResponse<OrderByIdData>
+      >(GET_ORDER_BY_ID_QUERY, { id: formattedId });
+
+      if (response.errors && response.errors.length > 0) {
+        throw new ShopifyAPIError(
+          `Error de Shopify: ${response.errors[0].message}`
+        );
+      }
+
+      if (!response.data.order) {
+        return null;
+      }
+
+      return this.mapShopifyOrderToOrder(response.data.order);
+    } catch (error) {
+      console.error('Error obteniendo orden por ID', { orderId, error });
       throw error;
     }
   }
