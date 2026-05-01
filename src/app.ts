@@ -25,7 +25,7 @@ import {
   OrderController,
   ImageController,
   LocationController,
-  PublicationController,
+  PublicationController
 } from './controllers';
 
 // Rutas

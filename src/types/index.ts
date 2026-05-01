@@ -251,13 +251,6 @@ export interface LineItem {
   product?: Product;
 }
 
-export interface Customer {
-  id: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-}
-
 // ============================================
 // LOCACIONES
 // ============================================
