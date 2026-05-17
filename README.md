@@ -391,6 +391,7 @@ Los siguientes scripts están disponibles para facilitar el desarrollo y la gest
 | PUT | /product/variants | Update variants |
 | DELETE | /product/variants | Delete variants |
 | POST | /product/variants/images | Update variant images |
+| PUT | /product/publish | Toggle product publication |
 
 ## Variants (`/product/variant`)
 
@@ -1110,6 +1111,45 @@ Permite remover una o varias variantes de un producto existente. Es útil para l
       "id": "gid://shopify/ProductVariant/48377647792383"
     }
   ]
+}
+```
+
+---
+
+## 15. Publicar/Despublicar Producto (Toggle Product Publication)
+
+### Publicar o despublicar un producto en un canal de venta
+Permite activar o desactivar la visibilidad de un producto en un canal de publicación específico (Online Store, POS, etc.). Si no se especifica el parámetro `publish`, el sistema detectará el estado actual y cambiará al estado opuesto (toggle).
+
+* **URL:** `/product/publish`
+* **Método:** `PUT`
+* **Autenticación:** Requerida (Bearer Token)
+* **Content-Type:** `application/json`
+
+#### Estructura del Body (JSON)
+
+| Campo | Tipo | Requerido | Descripción |
+| :--- | :--- | :--- | :--- |
+| `productId` | String | Sí | ID global del producto. |
+| `publicationId` | String | Sí | ID del canal de publicación. |
+| `publish` | Boolean | No | `true` para publicar, `false` para despublicar. Si no se envía, se togglea el estado actual. |
+
+**Ejemplo de solicitud (con publish explícito):**
+
+```json
+{
+  "productId": "gid://shopify/Product/9448497447167",
+  "publicationId": "gid://shopify/Publication/154542309631",
+  "publish": true
+}
+```
+
+**Ejemplo de solicitud (toggle automático):**
+
+```json
+{
+  "productId": "gid://shopify/Product/9448497447167",
+  "publicationId": "gid://shopify/Publication/154542309631"
 }
 ```
 ---

@@ -6,14 +6,21 @@ import { apiRateLimiter } from '../middleware/rate-limit.middleware';
 export const createOrderRoutes = (orderController: OrderController): Router => {
   const router = Router();
 
-  // GET /orders - Sincronizar órdenes desde Shopify
+  // GET /orders - Sincronizar órdenes desde Shopify (solo mounted en /orders)
   router.get(
     '/',
     apiRateLimiter,
     orderController.getAllOrders
   );
 
-// GET /order/products/:order_id - Detalles de productos en orden
+  // GET /orders/simple - Lista simple de órdenes
+  router.get(
+    '/simple',
+    apiRateLimiter,
+    orderController.getAllOrdersSimple
+  );
+
+// GET /orders/products/:order_id - Detalles de productos en orden
   router.get(
     '/products/:order_id',
     apiRateLimiter,
@@ -26,9 +33,6 @@ export const createOrderRoutes = (orderController: OrderController): Router => {
     apiRateLimiter,
     orderController.getAllOrdersSimple
   );
-
-  // GET /order?order_id=... - Detalles de orden por ID (soporta GID completo)
-  router.get('/', orderController.getOrderById);
 
   return router;
 };

@@ -9,7 +9,8 @@ import {
   editProductSchema,
   deleteProductSchema,
   updateVariantImagesSchema,
-  addVariantsSchema
+  addVariantsSchema,
+  togglePublicationSchema
 } from '../validators/product.validator';
 import { apiRateLimiter, writeRateLimiter } from '../middleware/rate-limit.middleware';
 
@@ -109,6 +110,14 @@ export const createProductRoutes = (
     writeRateLimiter,
     validateRequest(updateVariantImagesSchema),
     productController.updateVariantImages
+  );
+
+  // PUT /product/publish - Publicar o despublicar producto
+  router.put(
+    '/publish',
+    writeRateLimiter,
+    validateRequest(togglePublicationSchema),
+    productController.togglePublishStatus
   );
 
   return router;

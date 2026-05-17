@@ -11,6 +11,21 @@ export class OrderController {
     next: NextFunction
   ): Promise<void> => {
     try {
+      const orderId = req.query.order_id as string;
+
+      if (req.baseUrl === '/order' && orderId) {
+        console.log(`GET /order?order_id=${orderId} - Obteniendo detalles de la orden`);
+        const order = await this.orderService.getOrderById(orderId);
+
+        if (!order) {
+          res.status(404).json({ success: false, message: 'Orden no encontrada' });
+          return;
+        }
+
+        res.status(200).json({ success: true, data: order });
+        return;
+      }
+
       const first = Number(req.query.first) || 50;
       const after = typeof req.query.after === 'string' ? req.query.after : undefined;
 
@@ -79,24 +94,21 @@ export class OrderController {
   ): Promise<void> => {
     try {
       const orderId = req.query.order_id as string;
-      console.log(`GET /order?order_id=${orderId} - Obteniendo detalles de la orden`);
 
-      if (!orderId) {
-        res.status(400).json({ success: false, message: 'El parámetro order_id es requerido' });
+      if (orderId) {
+        console.log(`GET /orders?order_id=${orderId} - Obteniendo detalles de la orden`);
+        const order = await this.orderService.getOrderById(orderId);
+
+        if (!order) {
+          res.status(404).json({ success: false, message: 'Orden no encontrada' });
+          return;
+        }
+
+        res.status(200).json({ success: true, data: order });
         return;
       }
 
-      const order = await this.orderService.getOrderById(orderId);
-
-      if (!order) {
-        res.status(404).json({ success: false, message: 'Orden no encontrada' });
-        return;
-      }
-
-      res.status(200).json({
-        success: true,
-        data: order,
-      });
+      next();
     } catch (error) {
       next(error);
     }

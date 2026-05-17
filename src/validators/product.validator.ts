@@ -172,3 +172,11 @@ export const addVariantsSchema = z.object({
 });
 
 export type AddVariantsInput = z.infer<typeof addVariantsSchema>;
+
+export const togglePublicationSchema = z.object({
+  productId: z.string().min(1, 'Product ID es requerido'),
+  publicationId: z.string().min(1, 'Publication ID es requerido'),
+  publish: z.boolean().optional(),
+});
+
+export type TogglePublicationInput = z.infer<typeof togglePublicationSchema>;

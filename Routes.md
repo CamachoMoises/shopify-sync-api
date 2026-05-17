@@ -862,3 +862,61 @@ Permite ajustar el stock disponible de múltiples variantes de forma simultánea
   ]
 }
 ```
+
+---
+
+## 17. Publicar/Despublicar Producto (Toggle Product Publication)
+
+### Publicar o despublicar un producto en un canal de venta
+Permite activar o desactivar la visibilidad de un producto en un canal de publicación específico (Online Store, POS, etc.). Si no se especifica el parámetro `publish`, el sistema detectará el estado actual y cambiará al estado opuesto (toggle).
+
+* **URL:** `/product/publish`
+* **Método:** `PUT`
+* **Autenticación:** Requerida (Bearer Token)
+* **Content-Type:** `application/json`
+
+#### Estructura del Body (JSON)
+
+| Campo | Tipo | Requerido | Descripción |
+| :--- | :--- | :--- | :--- |
+| `productId` | String | Sí | ID global del producto a publicar/despublicar. |
+| `publicationId` | String | Sí | ID del canal de publicación (publication). |
+| `publish` | Boolean | No | `true` para publicar, `false` para despublicar. Si no se envía, se togglea el estado actual. |
+
+**Ejemplo de solicitud (Publicar explícitamente):**
+
+```json
+{
+  "productId": "gid://shopify/Product/9448497447167",
+  "publicationId": "gid://shopify/Publication/154542309631",
+  "publish": true
+}
+```
+
+**Ejemplo de solicitud (Despublicar explícitamente):**
+
+```json
+{
+  "productId": "gid://shopify/Product/9448497447167",
+  "publicationId": "gid://shopify/Publication/154542309631",
+  "publish": false
+}
+```
+
+**Ejemplo de solicitud (Toggle automático - sin parámetro publish):**
+
+```json
+{
+  "productId": "gid://shopify/Product/9448497447167",
+  "publicationId": "gid://shopify/Publication/154542309631"
+}
+```
+
+#### Respuesta Exitosa (200 OK)
+
+```json
+{
+  "success": true,
+  "message": "Estado de publicación actualizado exitosamente"
+}
+```

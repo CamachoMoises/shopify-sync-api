@@ -210,6 +210,10 @@ export interface CreateImageInput {
 // ÓRDENES
 // ============================================
 
+export interface OrderCustomer {
+  id: string;
+}
+
 export interface Order {
   id: string;
   name: string;
@@ -221,6 +225,7 @@ export interface Order {
   subtotalPrice: string;
   totalTax: string;
   currencyCode: string;
+  customer?: OrderCustomer;
   lineItems: LineItem[];
 }
 
@@ -319,6 +324,7 @@ export interface IProductService {
   addVariants(payload: AddVariantsPayload): Promise<void>;
   deleteVariant(payload: DeleteVariantPayload): Promise<void>;
   deleteProduct(productId: string): Promise<void>;
+  toggleProductPublication(productId: string, publicationId: string, publish?: boolean): Promise<void>;
 }
 
 export interface IVariantService {

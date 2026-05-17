@@ -166,6 +166,9 @@ const GET_ORDER_BY_ID_QUERY = `
         }
       }
       currencyCode
+      customer {
+        id
+      }
       lineItems(first: 100) {
         edges {
           node {
@@ -246,6 +249,9 @@ interface ShopifyOrderNode {
     };
   };
   currencyCode: string;
+  customer: {
+    id: string;
+  } | null;
   lineItems: {
     edges: Array<{
       node: ShopifyLineItemNode;
@@ -460,6 +466,9 @@ export class OrderService implements IOrderService {
       subtotalPrice: node.subtotalPriceSet.shopMoney.amount,
       totalTax: node.totalTaxSet.shopMoney.amount,
       currencyCode: node.currencyCode,
+      customer: node.customer ? {
+        id: node.customer.id,
+      } : undefined,
       lineItems: node.lineItems.edges.map((edge) =>
         this.mapShopifyLineItemToLineItem(edge.node)
       ),

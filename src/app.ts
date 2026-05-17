@@ -117,13 +117,13 @@ export const createApp = (): Application => {
     });
   });
 
-  // Orders
+  // Orders (list and detail)
   app.use(
     '/orders',
     createOrderRoutes(container.orderController)
   );
 
-  // Order (singular)
+  // Order (single by query)
   app.use(
     '/order',
     createOrderRoutes(container.orderController)

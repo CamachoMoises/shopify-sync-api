@@ -190,6 +190,27 @@ export class ProductController {
     }
   };
 
+  togglePublishStatus = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { productId, publicationId, publish } = req.body;
+      const action = publish === undefined ? 'Cambiando estado de publicación' : (publish ? 'Publicando' : 'Despublicando');
+      console.log(`PUT /product/publish - ${action} producto`);
+
+      await this.productService.toggleProductPublication(productId, publicationId, publish);
+
+      res.status(200).json({
+        success: true,
+        message: 'Estado de publicación actualizado exitosamente',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   deleteProductById = async (
     req: Request,
     res: Response,

@@ -306,6 +306,19 @@ const INVENTORY_ADJUST_MUTATION = `
   }
 `;
 
+const UNPUBLISH_PRODUCT_MUTATION = `
+  mutation publishableUnpublish($id: ID!, $input: [PublicationInput!]!) {
+    publishableUnpublish(id: $id, input: $input) {
+      publishable {
+        ... on Product {
+          id
+        }
+      }
+      userErrors { field message }
+    }
+  }
+`;
+
 const PUBLISH_PRODUCT_MUTATION = `
   mutation publishablePublish($id: ID!, $input: [PublicationInput!]!) {
     publishablePublish(id: $id, input: $input) {
@@ -537,6 +550,13 @@ interface CreateOptionsData {
 }
 interface PublishProductData {
   publishablePublish: {
+    publishable: { id: string; title: string } | null;
+    userErrors: Array<{ field: string[]; message: string }>;
+  };
+}
+
+interface UnpublishProductData {
+  publishableUnpublish: {
     publishable: { id: string; title: string } | null;
     userErrors: Array<{ field: string[]; message: string }>;
   };
@@ -1361,6 +1381,70 @@ export class ProductService implements IProductService {
       });
     } catch (error) {
       console.error('Error eliminando variantes', { error });
+      throw error;
+    }
+  }
+
+  async toggleProductPublication(productId: string, publicationId: string, publish?: boolean): Promise<void> {
+    try {
+      const formattedId = formatShopifyId(productId, 'Product');
+
+      let shouldPublish: boolean;
+      if (publish !== undefined) {
+        shouldPublish = publish;
+      } else {
+        const product = await this.getProductById(productId);
+        if (!product) {
+          throw new NotFoundError(`Producto ${productId} no encontrado`);
+        }
+        const isPublished = product.resourcePublications?.some(
+          (pub) => pub.publication.id === publicationId
+        ) ?? false;
+        shouldPublish = !isPublished;
+        console.log(`Estado actual: ${isPublished ? 'publicado' : 'despublicado'}. Nueva acción: ${shouldPublish ? 'publicar' : 'despublicar'}`);
+      }
+
+      if (shouldPublish) {
+        console.log('Publicando producto', { productId, publicationId });
+        const response = await this.shopifyClient.request<
+          ShopifyResponse<PublishProductData>
+        >(PUBLISH_PRODUCT_MUTATION, {
+          id: formattedId,
+          input: [{ publicationId }],
+        });
+
+        if (response.errors && response.errors.length > 0) {
+          throw new ShopifyAPIError(`Error de Shopify: ${response.errors[0].message}`);
+        }
+
+        const { userErrors } = response.data.publishablePublish;
+        if (userErrors.length > 0) {
+          throw new BadRequestError(`Error publicando producto: ${userErrors[0].message}`);
+        }
+
+        console.log('Producto publicado exitosamente', { productId, publicationId });
+      } else {
+        console.log('Despublicando producto', { productId, publicationId });
+        const response = await this.shopifyClient.request<
+          ShopifyResponse<UnpublishProductData>
+        >(UNPUBLISH_PRODUCT_MUTATION, {
+          id: formattedId,
+          input: [{ publicationId }],
+        });
+
+        if (response.errors && response.errors.length > 0) {
+          throw new ShopifyAPIError(`Error de Shopify: ${response.errors[0].message}`);
+        }
+
+        const { userErrors } = response.data.publishableUnpublish;
+        if (userErrors.length > 0) {
+          throw new BadRequestError(`Error despublicando producto: ${userErrors[0].message}`);
+        }
+
+        console.log('Producto despublicado exitosamente', { productId, publicationId });
+      }
+    } catch (error) {
+      console.error('Error en toggle de publicación', { productId, publicationId, publish, error });
       throw error;
     }
   }
